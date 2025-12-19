@@ -1,16 +1,13 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import { Sidebar } from "@/components/sidebar/Sidebar";
 
-const geistSans = Geist({
+const inter = Inter({
   variable: "--font-geist-sans",
   subsets: ["latin"],
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+  weight: ["300","400","600","700","800"],
 });
 
 export const metadata: Metadata = {
@@ -26,7 +23,7 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"
@@ -34,7 +31,15 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
+          {/* Layout wrapper: sidebar on the left, content on the right */}
+          <div className="min-h-screen flex">
+            <Sidebar />
+
+            {/* Main content: stays to the right of the sidebar on large screens, has top padding for mobile header */}
+            <main className="flex-1 min-h-screen bg-gray-100 dark:bg-gray-900 pt-16 lg:pt-0">
+              {children}
+            </main>
+          </div>
         </ThemeProvider>
       </body>
     </html>

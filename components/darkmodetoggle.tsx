@@ -1,20 +1,48 @@
-'use client';
+'use client'
 
-import * as React from 'react';
-import { Sun, Moon } from 'lucide-react';
-import { useTheme } from 'next-themes';
+import * as React from 'react'
+import { Sun, Moon } from 'lucide-react'
+import { useTheme } from 'next-themes'
 
 export function DarkModeToggle() {
-    const { theme, setTheme } = useTheme();
+  const { setTheme, resolvedTheme } = useTheme()
+  const [mounted, setMounted] = React.useState(false)
 
-    const toggleTheme = () => {
-        setTheme(theme === 'light' ? 'dark' : 'light');
-    }
+  React.useEffect(() => {
+    setMounted(true)
+  }, [])
 
-    return (
-        <button onClick={toggleTheme}>
-            <Sun className='h-[1.2rem] w-[1.2rem] scale-100 rotate-0 transition-all dark:scale-0 dark:-rotate-90' />
-            <Moon className='absolute h-[1.2rem] w-[1.2rem] scale-0 rotate-90 transition-all dark:scale-100 dark:rotate-0' />
-        </button>
-    )
+  if (!mounted) return null 
+
+  const toggleTheme = () => {
+    setTheme(resolvedTheme === 'light' ? 'dark' : 'light')
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={toggleTheme}
+      aria-label={
+        resolvedTheme === 'dark'
+          ? 'Activate light mode'
+          : 'Activate dark mode'
+      }
+      className="relative inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-700 dark:text-gray-200 bg-transparent focus:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500"
+    >
+      <Sun
+        className={`absolute h-5 w-5 transition-opacity duration-200 ${
+          resolvedTheme === 'dark'
+            ? 'opacity-0 scale-90'
+            : 'opacity-100 scale-100'
+        }`}
+      />
+      <Moon
+        className={`absolute h-5 w-5 transition-opacity duration-200 ${
+          resolvedTheme === 'dark'
+            ? 'opacity-100 scale-100'
+            : 'opacity-0 scale-90'
+        }`}
+      />
+    </button>
+  )
 }
