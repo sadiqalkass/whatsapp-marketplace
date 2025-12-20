@@ -38,7 +38,7 @@ export const sidebarData: SidebarSection[] = [
     section: 'Orders',
     icon: Truck,
     items: [
-      { id: 'active-orders', label: 'Active Orders', badge: 12 },
+      { id: 'active-orders', label: 'Active Orders', badge: 8 },
       { id: 'fulfillment', label: 'Fulfillment' },
       { id: 'returns', label: 'Returns', badge: 2 },
     ],

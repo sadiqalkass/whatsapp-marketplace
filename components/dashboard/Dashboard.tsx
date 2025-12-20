@@ -6,7 +6,7 @@ import {
   DollarSign, 
   ShoppingCart, 
   Truck, 
-  CheckCircle2,
+  CheckCircle,
   Clock,
   Package,
   XCircle,
@@ -131,15 +131,36 @@ const ORDER_STATUSES: {
   { key: 'awaiting-payment', label: 'Awaiting Payment', icon: Clock, color: 'bg-yellow-500' },
   { key: 'awaiting-pickup', label: 'Awaiting Pickup', icon: Package, color: 'bg-blue-500' },
   { key: 'in-delivery', label: 'In Delivery', icon: Truck, color: 'bg-purple-500' },
-  { key: 'completed', label: 'Completed', icon: CheckCircle2, color: 'bg-green-500' },
+  { key: 'completed', label: 'Completed', icon: CheckCircle, color: 'bg-green-500' },
   { key: 'issues', label: 'Issues', icon: XCircle, color: 'bg-red-500' }
 ];
 
 const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; count: number }> = ({ status, count }) => {
   const router = useRouter();
   const handleClick = () => {
-    // Navigate to Orders page with status as a query param (filter)
-    router.push(`/orders?status=${encodeURIComponent(status.key)}`);
+    // Navigate to Active Orders page with a suitable query param (filter)
+    const params = new URLSearchParams();
+    switch (status.key) {
+      case 'awaiting-payment':
+        params.set('payment', 'Awaiting Payment');
+        break;
+      case 'awaiting-pickup':
+        params.set('status', 'Awaiting Pickup');
+        break;
+      case 'in-delivery':
+        params.set('status', 'In Delivery');
+        break;
+      case 'completed':
+        params.set('status', 'Completed');
+        break;
+      case 'issues':
+        params.set('status', 'Issues');
+        break;
+      default:
+        params.set('status', status.key);
+    }
+
+    router.push(`/active-orders?${params.toString()}`);
   };
 
   return (
