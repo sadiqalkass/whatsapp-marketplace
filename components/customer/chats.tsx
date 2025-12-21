@@ -2,9 +2,9 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, Search, User, Tag, UserPlus, X, Bot, Users, ShoppingBag, Clock, Phone } from 'lucide-react';
+import Chat from '@/Types/types';
 
-// Mock Data for Chats
-const mockChats = [
+const mockChats: Chat[] = [
   {
     id: 1,
     customer: 'John Doe',

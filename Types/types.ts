@@ -1,4 +1,5 @@
 import { LucideIcon } from 'lucide-react';
+type ChatStatus = "online" | "offline";
 
 export interface SidebarItem {
   id: string;
@@ -10,6 +11,24 @@ export interface SidebarSection {
   section: string;
   icon: LucideIcon;
   items: SidebarItem[];
+}
+
+export interface Chat {
+  id: number;
+  customer: string;
+  phone: string;
+  lastMessage: string;
+  timestamp: string;
+  unread: number;
+  tags: string[];
+  avatar: string;
+  status: ChatStatus; // Use the specific type
+  orders: {
+    id: string;
+    item: string;
+    amount: number;
+    date: string;
+  }[];
 }
 
 export interface SummaryCardProps {
@@ -83,4 +102,59 @@ export interface AdCampaign {
   revenue: number;
   roi: number;
   startDate: string;
+}
+
+export interface DeliveryZone {
+  id: string;
+  name: string;
+  rate: number;
+  enabled: boolean;
+}
+
+export interface ConfigData {
+  businessHours: {
+    enabled: boolean;
+    openTime: string;
+    closeTime: string;
+  };
+  deliveryZones: DeliveryZone[];
+  defaultDeliveryFee: number;
+  orderCutoff: {
+    enabled: boolean;
+    time: string;
+  };
+  autoConfirmOrders: boolean;
+  allowWeekendDelivery: boolean;
+}
+
+export interface TeamMember {
+  id: string;
+  name: string;
+  email: string;
+  role: 'Admin' | 'Manager' | 'Support';
+  accessLevel: string;
+  status: 'Active' | 'Disabled';
+  joinedDate: string;
+}
+
+export interface RolePermissions {
+  [key: string]: {
+    label: string;
+    permissions: string[];
+  };
+}
+
+export interface Integration {
+  id: string;
+  name: string;
+  description: string;
+  category: 'Communication' | 'Payment' | 'Delivery';
+  status: 'Connected' | 'Disconnected' | 'Error';
+  lastSync: string;
+  icon: React.ComponentType<{ className?: string }>;
+  details: {
+    apiKey?: string;
+    endpoint?: string;
+    version?: string;
+  };
 }

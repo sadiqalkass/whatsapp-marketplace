@@ -40,16 +40,16 @@ export const sidebarData: SidebarSection[] = [
     items: [
       { id: 'active-orders', label: 'Active Orders', badge: 8 },
       { id: 'fulfillment', label: 'Fulfillment' },
-      { id: 'returns', label: 'Returns', badge: 2 },
+      { id: 'returns', label: 'Returns', badge: 7 },
     ],
   },
   {
     section: 'Customers',
     icon: MessageSquare,
     items: [
-      { id: 'chats', label: 'Chats', badge: 8 },
+      { id: 'chats', label: 'Chats', badge: 6 },
       { id: 'segments', label: 'Segments' },
-      { id: 'abandoned-carts', label: 'Abandoned Carts', badge: 15 },
+      { id: 'abandoned-carts', label: 'Abandoned Carts', badge: 8 },
     ],
   },
   {
