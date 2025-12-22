@@ -1,4 +1,4 @@
-import AbandonedCartsPage from "@/components/customer/Abandoned";
+import AbandonedCartsPage from "@/components/admin/customer/Abandoned";
 
 export default function AbandonedCarts() {
     return <AbandonedCartsPage />;

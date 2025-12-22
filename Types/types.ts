@@ -1,5 +1,6 @@
 import { LucideIcon } from 'lucide-react';
 type ChatStatus = "online" | "offline";
+type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
 export interface SidebarItem {
   id: string;
@@ -11,6 +12,14 @@ export interface SidebarSection {
   section: string;
   icon: LucideIcon;
   items: SidebarItem[];
+}
+export interface StatCardProps {
+  label: string;
+  value: string | number;
+  trend?: 'up' | 'down';
+  trendValue?: string;
+  icon: IconType;
+  delay?: number;
 }
 
 export interface Chat {

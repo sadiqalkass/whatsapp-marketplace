@@ -1,4 +1,4 @@
-import FulfillmentPage from "@/components/order/fulfillment";
+import FulfillmentPage from "@/components/admin/order/fulfillment";
 
 export default function Fulfillment() {
     return <FulfillmentPage />;

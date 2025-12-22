@@ -1,4 +1,4 @@
-import OnboardingPage from "@/components/merchant/Onboarding";
+import OnboardingPage from "@/components/admin/merchant/Onboarding";
 
 export default function Onboarding() {
   return <OnboardingPage />;

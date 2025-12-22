@@ -1,4 +1,4 @@
-import PricingManagerPage from "@/components/catalog/Pricing-manager";
+import PricingManagerPage from "@/components/admin/catalog/Pricing-manager";
 
 export default function PricingManager() {
     return <PricingManagerPage />;

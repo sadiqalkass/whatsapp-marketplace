@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Eye, Edit, CheckCircle, Clock, XCircle, FileText } from 'lucide-react';
-import { Template, StatusBadgeProps } from '../../Types/types';
+import { Template, StatusBadgeProps } from '../../../Types/types';
 
 const StatusBadge = ({ status, type = 'neutral' }: StatusBadgeProps) => {
   const colors = {

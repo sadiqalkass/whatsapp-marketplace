@@ -1,4 +1,4 @@
-import ReportsPage from "@/components/finance/Reports";
+import ReportsPage from "@/components/admin/finance/Reports";
 
 export default function Reports() {
     return <ReportsPage />;

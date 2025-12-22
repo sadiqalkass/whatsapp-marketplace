@@ -19,18 +19,9 @@ import {
   Download
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { StatCardProps, StatusBadgeProps } from '@/Types/types';
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
-
-// Reusable Components
-interface StatCardProps {
-  label: string;
-  value: string | number;
-  trend?: 'up' | 'down';
-  trendValue?: string;
-  icon: IconType;
-  delay?: number;
-}
 
 const StatCard: React.FC<StatCardProps> = ({ label, value, trend, trendValue, icon: Icon, delay }) => (
   <div
@@ -54,8 +45,6 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, trend, trendValue, ic
     </div>
   </div>
 );
-
-interface StatusBadgeProps { status: string }
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   const config: Record<'operational' | 'degraded' | 'down', { color: string; dot: string }> = {
@@ -160,7 +149,7 @@ const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; cou
         params.set('status', status.key);
     }
 
-    router.push(`/active-orders?${params.toString()}`);
+    router.push(`/admin/active-orders?${params.toString()}`);
   };
 
   return (

@@ -1,4 +1,4 @@
-import PayoutsPage from "@/components/merchant/Payout";
+import PayoutsPage from "@/components/admin/merchant/Payout";
 
 export default function Payouts() {
     return <PayoutsPage />;

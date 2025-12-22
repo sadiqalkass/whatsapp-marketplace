@@ -1,4 +1,4 @@
-import PlatformConfigPage from "@/components/settings/PlatformConfig";
+import PlatformConfigPage from "@/components/admin/settings/PlatformConfig";
 
 export default function PlatformConfig() {
     return <PlatformConfigPage />;
