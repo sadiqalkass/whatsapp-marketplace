@@ -59,6 +59,7 @@ export const sidebarData: SidebarSection[] = [
       { id: 'admin/escrow', label: 'Escrow' },
       { id: 'admin/settlements', label: 'Settlements' },
       { id: 'admin/reports', label: 'Reports' },
+      { id: 'admin/wallet', label: 'Wallet' },
     ],
   },
   {
