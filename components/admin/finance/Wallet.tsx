@@ -32,9 +32,6 @@ import {
   Clock
 } from 'lucide-react';
 
-// ============================================
-// TYPES & INTERFACES
-// ============================================
 
 interface WalletData {
   id: string;
@@ -107,9 +104,6 @@ interface SummaryCardProps {
   loading?: boolean;
 }
 
-// ============================================
-// MOCK DATA (Replace with API calls)
-// ============================================
 
 const mockLiquidityStats: LiquidityStats = {
   totalBalance: 12450000,
@@ -270,10 +264,6 @@ const SummaryCard = ({
   );
 };
 
-// ============================================
-// MAIN WALLET MANAGEMENT PAGE
-// ============================================
-
 export default function WalletManagementPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'ledger' | 'withdrawals'>('overview');
   const [loading, setLoading] = useState(false);
@@ -308,7 +298,7 @@ export default function WalletManagementPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen p-6">
       {/* Header */}
       <div className="mb-6">
         <div className="flex justify-between items-start mb-2">

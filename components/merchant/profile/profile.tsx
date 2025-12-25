@@ -2,17 +2,10 @@
 
 import React, { useState } from 'react';
 import { User, MapPin, Mail, Phone, Building2, Tag, Lock, CheckCircle, Clock, Edit2 } from 'lucide-react';
+import { MerchantProfile } from '@/Types/types';
+import Image from 'next/image';
 
 type VerificationStatus = 'Pending' | 'Verified';
-
-interface MerchantProfile {
-  businessName: string;
-  category: string;
-  location: string;
-  email: string;
-  phone: string;
-  verificationStatus: VerificationStatus;
-}
 
 export default function MerchantProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
@@ -61,6 +54,9 @@ export default function MerchantProfilePage() {
     };
   };
 
+  const [profilePicture, setProfilePicture] = useState<File | null>(null);
+  const [profilePictureUrl, setProfilePictureUrl] = useState<string>('/default-avatar.png');
+
   const verificationConfig = getVerificationConfig(profile.verificationStatus);
   const VerificationIcon = verificationConfig.icon;
   const [governmentId, setGovernmentId] = useState<File | null>(null);
@@ -68,33 +64,42 @@ export default function MerchantProfilePage() {
   const [productSample, setProductSample] = useState<File | null>(null);
   const [businessAddress, setBusinessAddress] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
-  const [isEditingVerification, setIsEditingVerification] = useState(false);
+  const [isEditingVerification, setIsEditingVerification] = useState(true);
 
   const handleVerificationSubmit = async () => {
+    // validate required fields
+    if (!governmentId || !productSample || !businessAddress.trim()) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
     const formData = new FormData();
-    
-    // Add business name from profile
     formData.append('businessName', profile.businessName);
-    
-    // Add required fields
-    if (governmentId) formData.append('governmentId', governmentId);
-    if (productSample) formData.append('productSample', productSample);
+    formData.append('governmentId', governmentId);
+    formData.append('productSample', productSample);
     formData.append('businessAddress', businessAddress);
-    
-    // Add optional fields
+
+    if (profilePicture) formData.append('profilePicture', profilePicture);
     if (registrationNumber) formData.append('registrationNumber', registrationNumber);
     if (businessLicense) formData.append('businessLicense', businessLicense);
-    
+
     try {
       const response = await fetch('/api/merchant/verification', {
         method: 'POST',
         body: formData
       });
-      
+
       const data = await response.json();
-      console.log('Verification submitted:', data);
+
+      if (response.ok) {
+        alert('Verificaation submitted successfully');
+        setProfile({...profile, verificationStatus: 'Pending'});
+      } else {
+        alert(data.message || 'Submission failed');
+      }
     } catch (error) {
-      console.error('Error submitting verification:', error);
+      alert('Error submitting verification');
+      console.error(error);
     }
   };
 
@@ -115,6 +120,40 @@ export default function MerchantProfilePage() {
             <VerificationIcon size={16} />
             {verificationConfig.label}
           </span>
+        </div>
+      </div>
+
+      {/* Profile Picture */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow mb-6">
+        <div className="p-6">
+          <div className="flex items-center gap-6">
+            <Image
+              src={profilePictureUrl}
+              alt="Profile"
+              className="w-24 h-24 rounded-full object-cover"
+            />
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                Profile Picture
+              </label>
+              <input
+                type="file"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) {
+                    if (file.size > 5 * 1024 * 1024) {
+                      alert('File too large. Max 5MB');
+                      return;
+                    }
+                    setProfilePicture(file);
+                    setProfilePictureUrl(URL.createObjectURL(file));
+                  }
+                }}
+                className="text-sm"
+              />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -280,6 +319,8 @@ export default function MerchantProfilePage() {
             </label>
             <input
               type="text"
+              value={registrationNumber}
+              onChange={(e) => setRegistrationNumber(e.target.value)}
               placeholder="e.g., RC123456"
               disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
@@ -329,6 +370,7 @@ export default function MerchantProfilePage() {
                 type="file"
                 id="business-license"
                 accept="image/*,.pdf"
+                onChange={(e) => setBusinessLicense(e.target.files?.[0] || null)}
                 disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
                 className="hidden"
               />
@@ -364,6 +406,7 @@ export default function MerchantProfilePage() {
                 type="file"
                 id="product-sample"
                 accept="image/*"
+                onChange={(e) => setProductSample(e.target.files?.[0] || null)}
                 disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
                 className="hidden"
               />
@@ -393,6 +436,8 @@ export default function MerchantProfilePage() {
             </label>
             <textarea
               rows={3}
+              value={businessAddress}
+              onChange={(e) => setBusinessAddress(e.target.value)}
               placeholder="Enter your complete business address"
               disabled={profile.verificationStatus === 'Verified'}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"

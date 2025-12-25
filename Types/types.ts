@@ -2,6 +2,7 @@ import { LucideIcon } from 'lucide-react';
 
 type ChatStatus = "online" | "offline";
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
+type VerificationStatus = 'Pending' | 'Verified';
 
 export interface SidebarItem {
   id: string;
@@ -168,4 +169,13 @@ export interface Integration {
     endpoint?: string;
     version?: string;
   };
+}
+
+export interface MerchantProfile {
+  businessName: string;
+  category: string;
+  location: string;
+  email: string;
+  phone: string;
+  verificationStatus: VerificationStatus;
 }
