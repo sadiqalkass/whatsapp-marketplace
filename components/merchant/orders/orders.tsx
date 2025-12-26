@@ -1,26 +1,19 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Package, Clock, CheckCircle } from 'lucide-react';
+import { Package, Clock, CheckCircle, XCircle } from 'lucide-react';
+import { Order } from '@/Types/types';
 
-type OrderStatus = 'New' | 'Preparing' | 'Ready';
-
-interface Order {
-  id: string;
-  items: string;
-  quantity: number;
-  status: OrderStatus;
-  pickupTime: string;
-}
+type OrderStatus = 'Pending' | 'Accepted' | 'Ready' | 'Completed' | 'Rejected';
 
 const mockOrders: Order[] = [
-  { id: 'ORD-1001', items: 'Wireless Earbuds Pro', quantity: 2, status: 'New', pickupTime: '2:30 PM' },
-  { id: 'ORD-1002', items: 'Smart Watch Series 5', quantity: 1, status: 'Preparing', pickupTime: '3:00 PM' },
-  { id: 'ORD-1003', items: 'USB-C Cable 2m, Phone Case', quantity: 3, status: 'New', pickupTime: '3:15 PM' },
-  { id: 'ORD-1004', items: 'Laptop Stand Aluminum', quantity: 1, status: 'Ready', pickupTime: '2:00 PM' },
-  { id: 'ORD-1005', items: 'Screen Protector Pack', quantity: 5, status: 'Preparing', pickupTime: '4:00 PM' },
-  { id: 'ORD-1006', items: 'Wireless Mouse, Keyboard', quantity: 2, status: 'New', pickupTime: '4:30 PM' },
-  { id: 'ORD-1007', items: 'Phone Case - Blue', quantity: 1, status: 'Ready', pickupTime: '1:45 PM' },
+  { id: 'ORD-1001', items: 'Wireless Earbuds Pro', quantity: 2, status: 'Pending', pickupTime: '2:30 PM', orderDate: '2024-06-15 -10:30 AM', orderNotes: 'Customer wants gift wrapping' },
+  { id: 'ORD-1002', items: 'Smart Watch Series 5', quantity: 1, status: 'Accepted', pickupTime: '3:00 PM', orderDate: '2024-06-15 -11:00 AM', orderNotes: 'Include extra strap' },
+  { id: 'ORD-1003', items: 'USB-C Cable 2m, Phone Case', quantity: 3, status: 'Pending', pickupTime: '3:15 PM', orderDate: '2024-06-15 -12:00 PM', orderNotes: '' },
+  { id: 'ORD-1004', items: 'Laptop Stand Aluminum', quantity: 1, status: 'Ready', pickupTime: '2:00 PM', orderDate: '2024-06-15 -1:00 PM', orderNotes: 'get it ready ASAP' },
+  { id: 'ORD-1005', items: 'Screen Protector Pack', quantity: 5, status: 'Accepted', pickupTime: '4:00 PM', orderDate: '2024-06-15 -2:30 PM', orderNotes: 'Yeah yeah' },
+  { id: 'ORD-1006', items: 'Wireless Mouse, Keyboard', quantity: 2, status: 'Pending', pickupTime: '4:30 PM', orderDate: '2024-06-15 -3:30 PM', orderNotes: 'Okayyy' },
+  { id: 'ORD-1007', items: 'Phone Case - Blue', quantity: 1, status: 'Ready', pickupTime: '1:45 PM', orderDate: '2024-06-15 -9 AM', orderNotes: 'Handle with care' },
 ];
 
 export default function MerchantOrdersPage() {
@@ -28,23 +21,35 @@ export default function MerchantOrdersPage() {
 
   const getStatusConfig = (status: OrderStatus) => {
     switch (status) {
-      case 'New':
+      case 'Pending':
         return { 
-          label: 'New', 
-          color: 'bg-blue-50 text-blue-700 dark:bg-blue-900/20 dark:text-blue-400',
-          icon: Package 
-        };
-      case 'Preparing':
-        return { 
-          label: 'Preparing', 
-          color: 'bg-amber-50 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400',
+          label: 'Pending', 
+          color: 'bg-gray-50 text-gray-700',
           icon: Clock 
+        };
+      case 'Accepted':
+        return { 
+          label: 'Accepted', 
+          color: 'bg-blue-50 text-blue-700',
+          icon: Package 
         };
       case 'Ready':
         return { 
-          label: 'Ready for Pickup', 
-          color: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400',
+          label: 'Ready', 
+          color: 'bg-emerald-50 text-emerald-700',
           icon: CheckCircle 
+        };
+      case 'Completed':
+        return { 
+          label: 'Completed', 
+          color: 'bg-green-50 text-green-700',
+          icon: CheckCircle 
+        };
+      case 'Rejected':
+        return { 
+          label: 'Rejected', 
+          color: 'bg-red-50 text-red-700',
+          icon: XCircle
         };
     }
   };
@@ -55,7 +60,7 @@ export default function MerchantOrdersPage() {
     ));
   };
 
-  const newOrdersCount = orders.filter(o => o.status === 'New').length;
+  const newOrdersCount = orders.filter(o => o.status === 'Pending').length;
 
   return (
     <div className="p-6 lg:p-8">
@@ -138,15 +143,15 @@ export default function MerchantOrdersPage() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex gap-2">
-                      {order.status === 'New' && (
+                      {order.status === 'Pending' && (
                         <button
-                          onClick={() => updateOrderStatus(order.id, 'Preparing')}
+                          onClick={() => updateOrderStatus(order.id, 'Accepted')}
                           className="px-3 py-1.5 text-xs font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
                         >
                           Start Preparing
                         </button>
                       )}
-                      {order.status === 'Preparing' && (
+                      {order.status === 'Accepted' && (
                         <button
                           onClick={() => updateOrderStatus(order.id, 'Ready')}
                           className="px-3 py-1.5 text-xs font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
@@ -160,6 +165,11 @@ export default function MerchantOrdersPage() {
                         </span>
                       )}
                     </div>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className="text-sm text-gray-600">
+                      {order.orderDate}
+                    </span>
                   </td>
                 </tr>
               );
@@ -213,15 +223,15 @@ export default function MerchantOrdersPage() {
 
               {/* Actions */}
               <div className="flex gap-2">
-                {order.status === 'New' && (
+                {order.status === 'Pending' && (
                   <button
-                    onClick={() => updateOrderStatus(order.id, 'Preparing')}
+                    onClick={() => updateOrderStatus(order.id, 'Accepted')}
                     className="flex-1 px-4 py-2.5 text-sm font-medium bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition-colors"
                   >
                     Start Preparing
                   </button>
                 )}
-                {order.status === 'Preparing' && (
+                {order.status === 'Accepted' && (
                   <button
                     onClick={() => updateOrderStatus(order.id, 'Ready')}
                     className="flex-1 px-4 py-2.5 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
