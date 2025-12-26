@@ -4,6 +4,18 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, DollarSign, Package, X, Upload, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 
+type Product = {
+  name: string;
+  category: string;
+  price: number;
+  description: string;
+  stockQuantity: number;
+  unit: string;
+  minOrderQty: number;
+  variants: { type: string; value: string }[];
+};
+
+
 // Mock data
 const mockProducts = [
   { id: 1, name: 'Fresh Tomatoes', category: 'Vegetables', price: 1500, stock: 'In Stock', approval: 'Approved', lastUpdated: '2 hours ago' },
@@ -27,6 +39,10 @@ const MerchantProducts = () => {
     name: '',
     category: '',
     price: '',
+    description: '',
+    stockQuantity: '',
+    unit: '',
+    minOrderQty: '',
     variants: [{ type: '', value: '' }]
   });
 
@@ -80,16 +96,29 @@ const MerchantProducts = () => {
     }
 
     setEditingProduct(null);
-    setFormData({ name: '', category: '', price: '', variants: [{ type: '', value: '' }] });
+    setFormData({
+      name: '',
+      category: '',
+      price: '',
+      description: '',
+      stockQuantity: '',
+      unit: '',
+      minOrderQty: '',
+      variants: [{ type: '', value: '' }],
+    });
     setProductImages([]);
     setShowForm(true);
   };
 
-  const handleEditProduct = (product: any) => {
+  const handleEditProduct = (product: Product) => {
     setEditingProduct(product);
     setFormData({
       name: product.name,
       category: product.category,
+      description: product.description,
+      stockQuantity: product.stockQuantity.toString(),
+      unit: product.unit,
+      minOrderQty: product.minOrderQty.toString(),
       price: product.price.toString(),
       variants: [{ type: '', value: '' }]
     });
@@ -120,7 +149,8 @@ const MerchantProducts = () => {
 
   const handleSubmit = async () => {
     // Validation
-    if (!formData.name || !formData.category || !formData.price) {
+    if (!formData.name || !formData.category || !formData.price || !formData.description || 
+      !formData.stockQuantity || !formData.unit || !formData.minOrderQty) {
       alert('Please fill all required fields');
       return;
     }
@@ -136,7 +166,11 @@ const MerchantProducts = () => {
     submitData.append('name', formData.name);
     submitData.append('category', formData.category);
     submitData.append('price', formData.price);
-    submitData.append('businessName', businessName); // Add business name
+    submitData.append('businessName', businessName);
+    submitData.append('description', formData.description);
+    submitData.append('stockQuantity', formData.stockQuantity);
+    submitData.append('unit', formData.unit);
+    submitData.append('minOrderQty', formData.minOrderQty);
     
     // Add images
     productImages.forEach((image, index) => {
@@ -358,6 +392,72 @@ const MerchantProducts = () => {
                   />
                   <p className="text-xs text-gray-500 mt-1">Enter the price per unit</p>
                 </div>
+                
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Product Description <span className="text-red-500">*</span>
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                    placeholder="Describe your product, quality, origin, etc."
+                    rows={4}
+                  />
+                </div>
+
+                {/* Stock Quantity */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Stock Quantity <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.stockQuantity}
+                    onChange={(e) => setFormData({ ...formData, stockQuantity: e.target.value })}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                    placeholder="e.g., 100"
+                    min="0"
+                  />
+                </div>
+
+                {/* Unit of Measurement */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Unit of Measurement <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={formData.unit}
+                    onChange={(e) => setFormData({ ...formData, unit: e.target.value })}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                  >
+                    <option value="">Select unit</option>
+                    <option value="kg">Kilogram (kg)</option>
+                    <option value="g">Gram (g)</option>
+                    <option value="pieces">Pieces</option>
+                    <option value="liters">Liters</option>
+                    <option value="packs">Packs</option>
+                    <option value="boxes">Boxes</option>
+                  </select>
+                </div>
+
+                {/* Minimum Order Quantity */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Minimum Order Quantity <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.minOrderQty}
+                    onChange={(e) => setFormData({ ...formData, minOrderQty: e.target.value })}
+                    className="w-full px-3 sm:px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-transparent text-sm sm:text-base"
+                    placeholder="e.g., 10"
+                    min="1"
+                  />
+                  <p className="text-xs text-gray-500 mt-1">Minimum quantity buyers must order</p>
+                </div>
+
 
                 {/* Images Upload */}
                 <div>
