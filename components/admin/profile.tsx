@@ -1,44 +1,82 @@
 'use client';
 
-import React, { useState } from 'react';
-import { Shield, Mail, User, Clock, Key, Smartphone, Bell, Moon, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-
-// Mock data
-const mockProfile = {
-  fullName: "Sarah Martinez",
-  email: "sarah.martinez@company.com",
-  role: "Admin",
-  status: "Active",
-  permissions: [
-    "Can manage orders",
-    "Can handle chats",
-    "Can view financials",
-    "Can manage users",
-    "Can access analytics",
-    "Can modify settings"
-  ],
-  twoFactorEnabled: true,
-  recentActivity: [
-    { action: "Logged in", timestamp: "2025-12-26 09:15 AM" },
-    { action: "Approved merchant: TechStore Ltd", timestamp: "2025-12-26 08:45 AM" },
-    { action: "Updated order status: #ORD-4521", timestamp: "2025-12-25 04:30 PM" },
-    { action: "Responded to support ticket #892", timestamp: "2025-12-25 02:15 PM" },
-    { action: "Modified user permissions: John Doe", timestamp: "2025-12-24 11:20 AM" },
-    { action: "Generated monthly report", timestamp: "2025-12-24 10:05 AM" },
-    { action: "Logged in", timestamp: "2025-12-24 09:00 AM" }
-  ],
-  preferences: {
-    emailNotifications: true,
-    pushNotifications: false,
-    theme: "light"
-  }
-};
+import React, { useState, useEffect } from 'react';
+import { Shield, Mail, Clock, Key, Smartphone, Bell, Moon, CheckCircle, XCircle, AlertCircle, LogOut } from 'lucide-react';
+import { authService } from '@/services/auth.service';
+import { profileService } from '@/services/profile.service';
 
 const AdminProfile = () => {
-  const [profile] = useState(mockProfile);
-  const [emailNotif, setEmailNotif] = useState(profile.preferences.emailNotifications);
-  const [pushNotif, setPushNotif] = useState(profile.preferences.pushNotifications);
-  const [theme, setTheme] = useState(profile.preferences.theme);
+  const [emailNotif, setEmailNotif] = useState(false);
+  const [pushNotif, setPushNotif] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [realProfile, setRealProfile] = useState<any>(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = async () => {
+    try {
+      const response = await profileService.getAdminProfile();
+      setRealProfile(response.data);
+
+      // Update preferences state
+      if (response.data.preferences) {
+        setEmailNotif(response.data.preferences.emailNotifications);
+        setPushNotif(response.data.preferences.pushNotifications);
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePasswordChange = async () => {
+    // Validation
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordError('');
+
+    try {
+      
+      await profileService.changeAdminPassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+
+      alert('Password changed successfully!');
+      setShowPasswordModal(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      setPasswordError(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   const getRoleBadgeColor = (role: string) => {
     const colors = {
@@ -54,6 +92,44 @@ const AdminProfile = () => {
       ? "text-green-600" 
       : "text-red-600";
   };
+
+  const handleEmailNotifToggle = async () => {
+    const newValue = !emailNotif;
+    setEmailNotif(newValue);
+    
+    try {
+      await profileService.updateAdminPreferences({
+        emailNotifications: newValue,
+        pushNotifications: pushNotif
+      });
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      setEmailNotif(!newValue); // Revert on error
+    }
+  };
+
+  const handlePushNotifToggle = async () => {
+    const newValue = !pushNotif;
+    setPushNotif(newValue);
+    
+    try {
+      await profileService.updateAdminPreferences({
+        emailNotifications: emailNotif,
+        pushNotifications: newValue
+      });
+    } catch (error) {
+      console.error('Error updating preferences:', error);
+      setPushNotif(!newValue); // Revert on error
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-8">
@@ -71,35 +147,35 @@ const AdminProfile = () => {
             <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
               <div className="flex items-center justify-center mb-6">
                 <div className="w-24 h-24 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-full flex items-center justify-center text-white text-3xl font-bold">
-                  {profile.fullName.split(' ').map(n => n[0]).join('')}
+                  {realProfile?.name?.split(' ').map((n: string) => n[0]).join('') || 'A'}
                 </div>
               </div>
 
               <div className="text-center mb-6">
-                <h2 className="text-xl font-bold text-gray-900 mb-1">{profile.fullName}</h2>
+                <h2 className="text-xl font-bold text-gray-900 mb-1">{realProfile?.name || 'Admin User'}</h2>
                 <p className="text-gray-600 text-sm flex items-center justify-center gap-1">
                   <Mail className="w-4 h-4" />
-                  {profile.email}
+                  {realProfile?.email}
                 </p>
               </div>
 
               <div className="space-y-3 pt-4 border-t border-gray-100">
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Role</span>
-                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(profile.role)}`}>
-                    {profile.role}
+                  <span className={`px-3 py-1 rounded-full text-xs font-semibold border ${getRoleBadgeColor(realProfile?.role)}`}>
+                    {realProfile?.role}
                   </span>
                 </div>
 
                 <div className="flex items-center justify-between">
                   <span className="text-sm text-gray-600">Status</span>
-                  <span className={`flex items-center gap-1 text-sm font-semibold ${getStatusColor(profile.status)}`}>
-                    {profile.status === "Active" ? (
+                  <span className={`flex items-center gap-1 text-sm font-semibold ${getStatusColor(realProfile?.isActive ? 'Active' : 'Inactive')}`}>
+                    {realProfile?.isActive ? (
                       <CheckCircle className="w-4 h-4" />
                     ) : (
                       <XCircle className="w-4 h-4" />
                     )}
-                    {profile.status}
+                    {realProfile?.isActive ? 'Active' : 'Inactive'}
                   </span>
                 </div>
               </div>
@@ -113,12 +189,26 @@ const AdminProfile = () => {
               </h3>
 
               <div className="space-y-4">
-                <button className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors">
+                <button
+                  onClick={() => setShowPasswordModal(true)}
+                  className="w-full flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors"
+                >
                   <span className="flex items-center gap-2 text-sm font-medium text-gray-700">
                     <Key className="w-4 h-4" />
                     Change Password
                   </span>
                   <span className="text-gray-400">→</span>
+                </button>
+
+                <button 
+                  onClick={() => setShowLogoutModal(true)}
+                  className="w-full flex items-center justify-between p-3 rounded-lg border border-red-200 bg-red-50 hover:bg-red-100 transition-colors"
+                >
+                  <span className="flex items-center gap-2 text-sm font-medium text-red-600">
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </span>
+                  <span className="text-red-400">→</span>
                 </button>
 
                 <div className="p-3 rounded-lg border border-gray-200 bg-gray-50">
@@ -128,11 +218,11 @@ const AdminProfile = () => {
                       Two-Factor Auth
                     </span>
                     <span className={`px-2 py-1 rounded text-xs font-semibold ${
-                      profile.twoFactorEnabled 
+                      realProfile?.twoFactorEnabled
                         ? "bg-green-100 text-green-700" 
                         : "bg-gray-100 text-gray-600"
                     }`}>
-                      {profile.twoFactorEnabled ? "Enabled" : "Disabled"}
+                      {realProfile?.twoFactorEnabled ? "Enabled" : "Disabled"}
                     </span>
                   </div>
                   <p className="text-xs text-gray-500">
@@ -153,7 +243,7 @@ const AdminProfile = () => {
                     Email Notifications
                   </span>
                   <button
-                    onClick={() => setEmailNotif(!emailNotif)}
+                    onClick={handleEmailNotifToggle}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
                       emailNotif ? "bg-emerald-600" : "bg-gray-300"
                     }`}
@@ -170,7 +260,7 @@ const AdminProfile = () => {
                     Push Notifications
                   </span>
                   <button
-                    onClick={() => setPushNotif(!pushNotif)}
+                    onClick={handlePushNotifToggle}
                     className={`relative w-11 h-6 rounded-full transition-colors ${
                       pushNotif ? "bg-emerald-600" : "bg-gray-300"
                     }`}
@@ -179,22 +269,6 @@ const AdminProfile = () => {
                       pushNotif ? "translate-x-5" : "translate-x-0"
                     }`} />
                   </button>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="flex items-center gap-2 text-sm text-gray-700">
-                    <Moon className="w-4 h-4" />
-                    Theme Mode
-                  </span>
-                  <select
-                    value={theme}
-                    onChange={(e) => setTheme(e.target.value)}
-                    className="px-3 py-1 text-sm border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                  >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="auto">Auto</option>
-                  </select>
                 </div>
               </div>
             </div>
@@ -217,7 +291,7 @@ const AdminProfile = () => {
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {profile.permissions.map((permission, index) => (
+                {realProfile?.permissions?.map((permission: string, index: number) => (
                   <div
                     key={index}
                     className="flex items-center gap-3 p-3 rounded-lg bg-gray-50 border border-gray-100"
@@ -237,7 +311,7 @@ const AdminProfile = () => {
               </h3>
 
               <div className="space-y-1">
-                {profile.recentActivity.map((activity, index) => (
+                {realProfile?.recentActivity.map((activity: any, index: number) => (
                   <div
                     key={index}
                     className="flex items-start gap-4 p-3 rounded-lg hover:bg-gray-50 transition-colors"
@@ -245,7 +319,9 @@ const AdminProfile = () => {
                     <div className="w-2 h-2 bg-purple-600 rounded-full mt-2 flex-shrink-0" />
                     <div className="flex-1 min-w-0">
                       <p className="text-sm text-gray-900 font-medium">{activity.action}</p>
-                      <p className="text-xs text-gray-500 mt-0.5">{activity.timestamp}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">
+                        {new Date(activity.createdAt).toLocaleString()}
+                      </p>
                     </div>
                   </div>
                 ))}
@@ -258,6 +334,110 @@ const AdminProfile = () => {
           </div>
         </div>
       </div>
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Confirm Logout
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to logout? You will be redirected to the login page.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => authService.logout()}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Yes, Logout
+              </button>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Change Password
+            </h3>
+
+            {passwordError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>
+              </div>
+            )}
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handlePasswordChange}
+                disabled={passwordLoading}
+                className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {passwordLoading ? 'Changing...' : 'Change Password'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordError('');
+                }}
+                disabled={passwordLoading}
+                className="flex-1 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

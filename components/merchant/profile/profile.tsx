@@ -1,38 +1,86 @@
 'use client';
 
-import React, { useState } from 'react';
-import { User, MapPin, Mail, Phone, Building2, Tag, Lock, CheckCircle, Clock, Edit2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, MapPin, Mail, Phone, Building2, Tag, Lock, CheckCircle, Clock, Edit2, LogOut } from 'lucide-react';
 import { MerchantProfile } from '@/Types/types';
 import Image from 'next/image';
+import { authService } from '@/services/auth.service';
+import { profileService } from '@/services/profile.service';
 
 type VerificationStatus = 'Pending' | 'Verified';
 
 export default function MerchantProfilePage() {
-  const [isEditing, setIsEditing] = useState(false);
-  const [profile, setProfile] = useState<MerchantProfile>({
-    businessName: 'TechHub Electronics',
-    category: 'Electronics & Gadgets',
-    location: 'Lagos, Nigeria',
-    email: 'techhub@email.com',
-    phone: '+234 801 234 5678',
-    verificationStatus: 'Verified'
-  });
+  useEffect(() => {
+    fetchProfile();
+  }, []);
 
-  const [editedProfile, setEditedProfile] = useState<MerchantProfile>(profile);
+  const fetchProfile = async () => {
+    try {
+      const response = await profileService.getMerchantProfile();
+      setRealProfile(response.data);
+      
+      // Update form if profile exists
+      if (response.data) {
+        setEditedProfile({
+          businessName: response.data.businessName || '',
+          category: response.data.category || '',
+          location: response.data.location || '',
+          email: response.data.user?.email || '',
+          phone: response.data.phone || '',
+          verificationStatus: response.data.verificationStatus || 'Pending'
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching profile:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const [isEditing, setIsEditing] = useState(false);
+
+  const [loading, setLoading] = useState(true);
+  const [realProfile, setRealProfile] = useState<any>(null);
+
+  const [editedProfile, setEditedProfile] = useState<MerchantProfile>({
+    businessName: '',
+    category: '',
+    location: '',
+    email: '',
+    phone: '',
+    verificationStatus: 'Pending'
+  });
 
   const handleEdit = () => {
     setIsEditing(true);
-    setEditedProfile(profile);
+    if (realProfile) {
+      setEditedProfile({
+        businessName: realProfile.businessName || '',
+        category: realProfile.category || '',
+        location: realProfile.location || '',
+        email: realProfile.user?.email || '',
+        phone: realProfile.phone || '',
+        verificationStatus: realProfile.verificationStatus || 'Pending'
+      });
+    }
   };
 
-  const handleSave = () => {
-    setProfile(editedProfile);
+  const handleSave = async () => {
     setIsEditing(false);
+    fetchProfile(); 
   };
 
   const handleCancel = () => {
-    setEditedProfile(profile);
     setIsEditing(false);
+    if (realProfile) {
+      setEditedProfile({
+        businessName: realProfile.businessName || '',
+        category: realProfile.category || '',
+        location: realProfile.location || '',
+        email: realProfile.user?.email || '',
+        phone: realProfile.phone || '',
+        verificationStatus: realProfile.verificationStatus || 'Pending'
+      });
+    }
   };
 
   const handleInputChange = (field: keyof MerchantProfile, value: string) => {
@@ -57,7 +105,9 @@ export default function MerchantProfilePage() {
   const [profilePicture, setProfilePicture] = useState<File | null>(null);
   const [profilePictureUrl, setProfilePictureUrl] = useState<string>('/default-avatar.png');
 
-  const verificationConfig = getVerificationConfig(profile.verificationStatus);
+  const verificationConfig = getVerificationConfig(
+    realProfile?.verificationStatus === 'VERIFIED' ? 'Verified' : 'Pending'
+  );
   const VerificationIcon = verificationConfig.icon;
   const [governmentId, setGovernmentId] = useState<File | null>(null);
   const [businessLicense, setBusinessLicense] = useState<File | null>(null);
@@ -65,6 +115,51 @@ export default function MerchantProfilePage() {
   const [businessAddress, setBusinessAddress] = useState('');
   const [registrationNumber, setRegistrationNumber] = useState('');
   const [isEditingVerification, setIsEditingVerification] = useState(true);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
+  });
+  const [passwordError, setPasswordError] = useState('');
+  const [passwordLoading, setPasswordLoading] = useState(false);
+
+  const handlePasswordChange = async () => {
+    // Validation
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      setPasswordError('All fields are required');
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      setPasswordError('New passwords do not match');
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      setPasswordError('Password must be at least 6 characters');
+      return;
+    }
+
+    setPasswordLoading(true);
+    setPasswordError('');
+
+    try {
+      await profileService.changeMerchantPassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword
+      });
+
+      alert('Password changed successfully!');
+      setShowPasswordModal(false);
+      setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+    } catch (error: any) {
+      setPasswordError(error.response?.data?.message || 'Failed to change password');
+    } finally {
+      setPasswordLoading(false);
+    }
+  };
 
   const handleVerificationSubmit = async () => {
     // validate required fields
@@ -74,7 +169,10 @@ export default function MerchantProfilePage() {
     }
 
     const formData = new FormData();
-    formData.append('businessName', profile.businessName);
+    formData.append('businessName', realProfile?.businessName || '');
+    formData.append('category', realProfile?.category || '');
+    formData.append('location', realProfile?.location || '');
+    formData.append('phone', realProfile?.phone || '');
     formData.append('governmentId', governmentId);
     formData.append('productSample', productSample);
     formData.append('businessAddress', businessAddress);
@@ -93,7 +191,7 @@ export default function MerchantProfilePage() {
 
       if (response.ok) {
         alert('Verificaation submitted successfully');
-        setProfile({...profile, verificationStatus: 'Pending'});
+        fetchProfile();
       } else {
         alert(data.message || 'Submission failed');
       }
@@ -102,6 +200,14 @@ export default function MerchantProfilePage() {
       console.error(error);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-gray-600">Loading...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
@@ -187,9 +293,9 @@ export default function MerchantProfilePage() {
                 <User size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  value={isEditing ? editedProfile.businessName : profile.businessName}
+                  value={isEditing ? editedProfile.businessName : realProfile?.businessName}
                   onChange={(e) => handleInputChange('businessName', e.target.value)}
-                  disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                  disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -204,9 +310,9 @@ export default function MerchantProfilePage() {
                 <Tag size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  value={isEditing ? editedProfile.category : profile.category}
+                  value={isEditing ? editedProfile.category : realProfile?.category}
                   onChange={(e) => handleInputChange('category', e.target.value)}
-                  disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                  disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -221,9 +327,9 @@ export default function MerchantProfilePage() {
                 <MapPin size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="text"
-                  value={isEditing ? editedProfile.location : profile.location}
+                  value={isEditing ? editedProfile.location : realProfile?.location}
                   onChange={(e) => handleInputChange('location', e.target.value)}
-                  disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                  disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -252,9 +358,9 @@ export default function MerchantProfilePage() {
                 <Mail size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="email"
-                  value={isEditing ? editedProfile.email : profile.email}
+                  value={isEditing ? editedProfile.email : realProfile?.user?.email}
                   onChange={(e) => handleInputChange('email', e.target.value)}
-                  disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                  disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -268,9 +374,9 @@ export default function MerchantProfilePage() {
                 <Phone size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
                 <input
                   type="tel"
-                  value={isEditing ? editedProfile.phone : profile.phone}
+                  value={isEditing ? editedProfile.phone : realProfile?.phone}
                   onChange={(e) => handleInputChange('phone', e.target.value)}
-                  disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                  disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                   className="w-full pl-10 pr-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
                 />
               </div>
@@ -286,7 +392,7 @@ export default function MerchantProfilePage() {
             <CheckCircle size={20} className="text-gray-400" />
             Account Verification
           </h2>
-          {isEditingVerification && profile.verificationStatus !== 'Verified' && (
+          {isEditingVerification && realProfile?.verificationStatus !== 'Verified' && (
             <button
               onClick={() => setIsEditingVerification(true)}
               className='inline-flex items-center gap-2 px-4 py-2 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors'
@@ -323,7 +429,7 @@ export default function MerchantProfilePage() {
               value={registrationNumber}
               onChange={(e) => setRegistrationNumber(e.target.value)}
               placeholder="e.g., RC123456"
-              disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+              disabled={realProfile?.verificationStatus === 'VERIFIED' || !isEditingVerification}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
             />
           </div>
@@ -339,12 +445,12 @@ export default function MerchantProfilePage() {
                 id="government-id"
                 accept="image/*,.pdf"
                 onChange={(e) => setGovernmentId(e.target.files?.[0] || null)}
-                disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                 className="hidden"
               />
               <label
                 htmlFor="government-id"
-                className={`cursor-pointer ${profile.verificationStatus === 'Verified' || !isEditingVerification ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`cursor-pointer ${realProfile?.verificationStatus === 'Verified' || !isEditingVerification ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className="text-gray-400 mb-2">
                   <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
@@ -372,12 +478,12 @@ export default function MerchantProfilePage() {
                 id="business-license"
                 accept="image/*,.pdf"
                 onChange={(e) => setBusinessLicense(e.target.files?.[0] || null)}
-                disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                 className="hidden"
               />
               <label
                 htmlFor="business-license"
-                className={`cursor-pointer ${profile.verificationStatus === 'Verified' || !isEditingVerification ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`cursor-pointer ${realProfile?.verificationStatus === 'Verified' || !isEditingVerification ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className="text-gray-400 mb-2">
                   <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
@@ -408,12 +514,12 @@ export default function MerchantProfilePage() {
                 id="product-sample"
                 accept="image/*"
                 onChange={(e) => setProductSample(e.target.files?.[0] || null)}
-                disabled={profile.verificationStatus === 'Verified' || !isEditingVerification}
+                disabled={realProfile?.verificationStatus === 'Verified' || !isEditingVerification}
                 className="hidden"
               />
               <label
                 htmlFor="product-sample"
-                className={`cursor-pointer ${profile.verificationStatus === 'Verified' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className={`cursor-pointer ${realProfile?.verificationStatus === 'Verified' ? 'opacity-50 cursor-not-allowed' : ''}`}
               >
                 <div className="text-gray-400 mb-2">
                   <svg className="mx-auto h-12 w-12" stroke="currentColor" fill="none" viewBox="0 0 48 48">
@@ -440,13 +546,13 @@ export default function MerchantProfilePage() {
               value={businessAddress}
               onChange={(e) => setBusinessAddress(e.target.value)}
               placeholder="Enter your complete business address"
-              disabled={profile.verificationStatus === 'Verified'}
+              disabled={realProfile?.verificationStatus === 'Verified'}
               className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg text-sm bg-white dark:bg-gray-700 text-gray-900 dark:text-white disabled:bg-gray-50 dark:disabled:bg-gray-800 disabled:text-gray-500 dark:disabled:text-gray-400 focus:ring-2 focus:ring-emerald-500 focus:border-transparent resize-none"
             />
           </div>
 
           {/* Submit Button */}
-          {profile.verificationStatus !== 'Verified' && (
+          {realProfile?.verificationStatus !== 'Verified' && (
             <button
               onClick={handleVerificationSubmit}
               className="w-full px-6 py-3 text-sm font-medium bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors"
@@ -458,7 +564,7 @@ export default function MerchantProfilePage() {
       </div>
 
       {/* Action Buttons */}
-      {isEditingVerification && profile.verificationStatus !== 'Verified' && (
+      {isEditingVerification && realProfile?.verificationStatus !== 'Verified' && (
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <button
             onClick={handleVerificationSubmit}
@@ -475,7 +581,7 @@ export default function MerchantProfilePage() {
         </div>
       )}
 
-      {/* Change Password */}
+      {/* Change Password & Logout */}
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow">
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white flex items-center gap-2">
@@ -484,7 +590,7 @@ export default function MerchantProfilePage() {
           </h2>
         </div>
 
-        <div className="p-6">
+        <div className="p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-sm font-medium text-gray-900 dark:text-white mb-1">
@@ -494,12 +600,128 @@ export default function MerchantProfilePage() {
                 Last changed 30 days ago
               </p>
             </div>
-            <button className="px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors">
+            <button 
+              onClick={() => setShowPasswordModal(true)}
+              className="px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg transition-colors"
+            >
               Change Password
             </button>
           </div>
+
+          {/* ADD LOGOUT BUTTON */}
+          <button
+            onClick={() => setShowLogoutModal(true)}
+            className="w-full flex items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors"
+          >
+            <LogOut size={18} />
+            Logout
+          </button>
         </div>
       </div>
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
+              Confirm Logout
+            </h3>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+              Are you sure you want to logout? You will be redirected to the login page.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => authService.logout()}
+                className="flex-1 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Yes, Logout
+              </button>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                className="flex-1 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-medium transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* Change Password Modal */}
+      {showPasswordModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-md w-full p-6">
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-4">
+              Change Password
+            </h3>
+
+            {passwordError && (
+              <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
+                <p className="text-sm text-red-600 dark:text-red-400">{passwordError}</p>
+              </div>
+            )}
+
+            <div className="space-y-4 mb-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Current Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({...passwordForm, currentPassword: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({...passwordForm, newPassword: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  Confirm New Password
+                </label>
+                <input
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({...passwordForm, confirmPassword: e.target.value})}
+                  className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:border-transparent dark:bg-gray-700 dark:text-white"
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <button
+                onClick={handlePasswordChange}
+                disabled={passwordLoading}
+                className="flex-1 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {passwordLoading ? 'Changing...' : 'Change Password'}
+              </button>
+              <button
+                onClick={() => {
+                  setShowPasswordModal(false);
+                  setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                  setPasswordError('');
+                }}
+                disabled={passwordLoading}
+                className="flex-1 px-4 py-2.5 bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-900 dark:text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
