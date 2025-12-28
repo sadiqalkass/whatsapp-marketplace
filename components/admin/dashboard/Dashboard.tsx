@@ -16,17 +16,64 @@ import {
   Users,
   Megaphone,
   Wallet,
-  Download
+  Download,
+  ChevronDown,
+  Filter
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { StatCardProps, StatusBadgeProps } from '@/Types/types';
+import { motion } from 'framer-motion';
+import {
+  LineChart,
+  Line,
+  BarChart,
+  Bar,
+  PieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  Area,
+  AreaChart,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
+  ScatterChart,
+  Scatter,
+  ZAxis
+} from 'recharts';
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
+// Animation variants
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
+const itemVariants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1
+  }
+};
+
 const StatCard: React.FC<StatCardProps> = ({ label, value, trend, trendValue, icon: Icon, delay }) => (
-  <div
-    className="bg-white rounded-lg border border-gray-200 p-6 transform transition-all duration-300 hover:-translate-y-1 hover:shadow-lg animate-fade-in animate-preserve"
-    style={{ animationDelay: `${delay ?? 0}ms` }}
+  <motion.div
+    variants={itemVariants}
+    className="bg-white rounded-lg border border-gray-200 p-6 transform transition-all duration-300 hover:-translate-y-1 hover:shadow-lg"
   >
     <div className="flex items-start justify-between">
       <div className="flex-1">
@@ -43,7 +90,7 @@ const StatCard: React.FC<StatCardProps> = ({ label, value, trend, trendValue, ic
         <Icon className={`w-6 h-6 ${trend === 'up' ? 'text-green-600' : trend === 'down' ? 'text-red-600' : 'text-gray-600'}`} />
       </div>
     </div>
-  </div>
+  </motion.div>
 );
 
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
@@ -64,6 +111,50 @@ const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
   );
 };
 
+type ButtonVariant = 'default' | 'primary';
+interface ActionButtonProps { icon: IconType; label: string; variant?: ButtonVariant; delay?: number }
+
+const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, label, variant = 'default', delay }) => {
+  const router = useRouter();
+  
+  const handleClick = () => {
+    // Add navigation logic based on the action
+    switch (label) {
+      case 'Verify New Merchant':
+        router.push('/admin/onboarding');
+        break;
+      case 'Create Broadcast':
+        router.push('/admin/broadcasts');
+        break;
+      case 'View Pending Payouts':
+        router.push('/admin/payouts');
+        break;
+      case 'Download Daily Report':
+        // Trigger download or open reports page
+        router.push('/admin/reports');
+        break;
+    }
+  };
+
+  const variants: Record<ButtonVariant, string> = {
+    default: 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
+    primary: 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
+  };
+  
+  return (
+    <motion.button
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ delay }}
+      onClick={handleClick}
+      className={`flex items-center justify-center w-full px-4 py-3 border rounded-lg text-sm font-medium transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md ${variants[variant]}`}
+    >
+      <Icon className="w-4 h-4 mr-2" />
+      {label}
+    </motion.button>
+  );
+};
+
 interface AlertItemProps { type: 'delivery' | 'payment' | 'stock'; message: string; time: string; delay?: number }
 
 const AlertItem: React.FC<AlertItemProps> = ({ type, message, time, delay }) => {
@@ -75,7 +166,12 @@ const AlertItem: React.FC<AlertItemProps> = ({ type, message, time, delay }) => 
   const Icon = icons[type];
   
   return (
-    <div className="flex items-start p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors animate-fade-in animate-preserve" style={{ animationDelay: `${delay ?? 0}ms` }}>
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay }}
+      className="flex items-start p-3 hover:bg-gray-50 rounded-lg cursor-pointer transition-colors"
+    >
       <div className="flex-shrink-0 mt-0.5">
         <Icon className="w-5 h-5 text-orange-500" />
       </div>
@@ -83,51 +179,296 @@ const AlertItem: React.FC<AlertItemProps> = ({ type, message, time, delay }) => 
         <p className="text-sm text-gray-900">{message}</p>
         <p className="text-xs text-gray-500 mt-1">{time}</p>
       </div>
+    </motion.div>
+  );
+};
+
+// Revenue data for line chart
+const revenueData = [
+  { day: 'Mon', revenue: 420000, profit: 210000 },
+  { day: 'Tue', revenue: 520000, profit: 260000 },
+  { day: 'Wed', revenue: 580000, profit: 290000 },
+  { day: 'Thu', revenue: 620000, profit: 310000 },
+  { day: 'Fri', revenue: 810000, profit: 405000 },
+  { day: 'Sat', revenue: 920000, profit: 460000 },
+  { day: 'Sun', revenue: 780000, profit: 390000 },
+];
+
+// Category performance data for pie chart
+const categoryData = [
+  { name: 'Electronics', value: 35, color: '#8884d8' },
+  { name: 'Fashion', value: 25, color: '#82ca9d' },
+  { name: 'Groceries', value: 20, color: '#ffc658' },
+  { name: 'Home & Living', value: 15, color: '#ff8042' },
+  { name: 'Beauty', value: 5, color: '#0088fe' },
+];
+
+// Merchant performance data for bar chart
+const merchantData = [
+  { name: 'Tech Haven', orders: 450, revenue: 1200000, rating: 4.8 },
+  { name: 'Urban Style', orders: 380, revenue: 980000, rating: 4.7 },
+  { name: 'Fresh Mart', orders: 320, revenue: 750000, rating: 4.6 },
+  { name: 'Home Comfort', orders: 280, revenue: 620000, rating: 4.5 },
+  { name: 'Beauty Palace', orders: 190, revenue: 480000, rating: 4.4 },
+];
+
+// Geographic distribution data
+const zoneData = [
+  { zone: 'Ikeja', orders: 189, revenue: 2450000, deliveryTime: 35 },
+  { zone: 'VI', orders: 167, revenue: 1980000, deliveryTime: 28 },
+  { zone: 'Lekki', orders: 154, revenue: 1820000, deliveryTime: 42 },
+  { zone: 'Surulere', orders: 143, revenue: 1650000, deliveryTime: 38 },
+  { zone: 'Yaba', orders: 138, revenue: 1420000, deliveryTime: 32 },
+  { zone: 'Ajah', orders: 112, revenue: 1250000, deliveryTime: 45 },
+  { zone: 'Gbagada', orders: 98, revenue: 1120000, deliveryTime: 40 },
+];
+
+// Custom tooltip for charts
+const CustomTooltip = ({ active, payload, label }: any) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-3 border border-gray-200 rounded-lg shadow-lg">
+        <p className="font-medium text-gray-900">{label}</p>
+        {payload.map((entry: any, index: number) => (
+          <p key={index} className="text-sm" style={{ color: entry.color }}>
+            {entry.name}: {entry.name.includes('revenue') ? `₦${entry.value.toLocaleString()}` : entry.value}
+          </p>
+        ))}
+      </div>
+    );
+  }
+  return null;
+};
+
+// Revenue Trend Chart Component
+const RevenueTrendChart = () => {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-900">Revenue Trends (Weekly)</h3>
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Filter className="w-4 h-4" />
+          <span>Last 7 days</span>
+        </div>
+      </div>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={revenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="day" />
+            <YAxis tickFormatter={(value) => `₦${(value / 1000).toFixed(0)}k`} />
+            <Tooltip 
+              content={<CustomTooltip />}
+              formatter={(value: number) => [`₦${value.toLocaleString()}`, '']}
+            />
+            <Legend />
+            <Area 
+              type="monotone" 
+              dataKey="revenue" 
+              name="Revenue"
+              stroke="#8884d8" 
+              fill="#8884d8" 
+              fillOpacity={0.3}
+              strokeWidth={2}
+            />
+            <Area 
+              type="monotone" 
+              dataKey="profit" 
+              name="Profit"
+              stroke="#82ca9d" 
+              fill="#82ca9d" 
+              fillOpacity={0.3}
+              strokeWidth={2}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 };
 
-type ButtonVariant = 'default' | 'primary';
-interface ActionButtonProps { icon: IconType; label: string; variant?: ButtonVariant; delay?: number }
-
-const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, label, variant = 'default', delay }) => {
-  const variants: Record<ButtonVariant, string> = {
-    default: 'bg-white border-gray-300 text-gray-700 hover:bg-gray-50',
-    primary: 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700'
-  };
-  
+// Category Performance Chart
+const CategoryPerformanceChart = () => {
   return (
-    <button
-      className={`flex items-center px-4 py-2 border rounded-lg text-sm font-medium transition transform duration-200 hover:-translate-y-1 animate-fade-in animate-preserve ${variants[variant]}`}
-      style={{ animationDelay: `${delay ?? 0}ms` }}
-    >
-      <Icon className="w-4 h-4 mr-2" />
-      {label}
-    </button>
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <h3 className="font-semibold text-gray-900 mb-4">Category Performance</h3>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={categoryData}
+              cx="50%"
+              cy="50%"
+              labelLine={false}
+              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              outerRadius={80}
+              fill="#8884d8"
+              dataKey="value"
+            >
+              {categoryData.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={entry.color} />
+              ))}
+            </Pie>
+            <Tooltip 
+              formatter={(value: number) => [`${value}%`, 'Market Share']}
+              contentStyle={{ 
+                backgroundColor: 'white',
+                border: '1px solid #e5e7eb',
+                borderRadius: '0.5rem'
+              }}
+            />
+            <Legend />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 };
 
-// Interactive Order Flow Status: clickable buttons that navigate to Orders & Fulfillment
+// Merchant Comparison Chart
+const MerchantComparisonChart = () => {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="font-semibold text-gray-900">Top Merchant Performance</h3>
+        <button className="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+          View All <ChevronDown className="w-4 h-4 ml-1" />
+        </button>
+      </div>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={merchantData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+            <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
+            <YAxis yAxisId="left" />
+            <YAxis yAxisId="right" orientation="right" />
+            <Tooltip 
+              content={<CustomTooltip />}
+              formatter={(value: number, name: string) => {
+                if (name === 'revenue') return [`₦${value.toLocaleString()}`, 'Revenue'];
+                if (name === 'orders') return [value, 'Orders'];
+                return [value, name];
+              }}
+            />
+            <Legend />
+            <Bar yAxisId="left" dataKey="orders" name="Orders" fill="#8884d8" radius={[4, 4, 0, 0]} />
+            <Bar yAxisId="right" dataKey="revenue" name="Revenue" fill="#82ca9d" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
 
+// Geographic Heat Map Chart
+const GeographicHeatMap = () => {
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <h3 className="font-semibold text-gray-900 mb-4">Delivery Zone Performance</h3>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <ScatterChart margin={{ top: 20, right: 20, bottom: 20, left: 20 }}>
+            <CartesianGrid stroke="#f0f0f0" />
+            <XAxis 
+              type="number" 
+              dataKey="revenue" 
+              name="Revenue" 
+              unit="M" 
+              tickFormatter={(value) => `₦${(value / 1000000).toFixed(1)}`}
+            />
+            <YAxis 
+              type="number" 
+              dataKey="orders" 
+              name="Orders" 
+            />
+            <ZAxis 
+              type="number" 
+              dataKey="deliveryTime" 
+              range={[50, 400]} 
+              name="Delivery Time" 
+            />
+            <Tooltip 
+              cursor={{ strokeDasharray: '3 3' }}
+              formatter={(value: number, name: string) => {
+                if (name === 'revenue') return [`₦${value.toLocaleString()}`, 'Revenue'];
+                if (name === 'orders') return [value, 'Orders'];
+                if (name === 'deliveryTime') return [`${value} mins`, 'Avg Delivery Time'];
+                return [value, name];
+              }}
+            />
+            <Legend />
+            <Scatter 
+              name="Delivery Zones" 
+              data={zoneData} 
+              fill="#8884d8" 
+              shape="circle"
+            />
+          </ScatterChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="mt-4 grid grid-cols-2 gap-2">
+        <div className="text-center">
+          <div className="text-sm font-medium text-gray-600">Top Revenue Zone</div>
+          <div className="text-lg font-semibold text-gray-900">Ikeja</div>
+          <div className="text-sm text-gray-500">₦2.45M</div>
+        </div>
+        <div className="text-center">
+          <div className="text-sm font-medium text-gray-600">Fastest Delivery</div>
+          <div className="text-lg font-semibold text-gray-900">Victoria Island</div>
+          <div className="text-sm text-gray-500">28 mins avg</div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Order Velocity Radar Chart
+const OrderVelocityChart = () => {
+  const radarData = zoneData.map(zone => ({
+    subject: zone.zone,
+    A: zone.orders,
+    fullMark: 200,
+  }));
+
+  return (
+    <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <h3 className="font-semibold text-gray-900 mb-4">Zone Order Distribution</h3>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <RadarChart cx="50%" cy="50%" outerRadius="80%" data={radarData}>
+            <PolarGrid />
+            <PolarAngleAxis dataKey="subject" />
+            <PolarRadiusAxis />
+            <Radar
+              name="Orders"
+              dataKey="A"
+              stroke="#8884d8"
+              fill="#8884d8"
+              fillOpacity={0.6}
+            />
+            <Tooltip />
+            <Legend />
+          </RadarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+};
+
+// Order Flow Panel Component (Keep your existing interactive buttons)
 type StatusKey = 'awaiting-payment' | 'awaiting-pickup' | 'in-delivery' | 'completed' | 'issues';
 
-const ORDER_STATUSES: {
-  key: StatusKey;
-  label: string;
-  icon: IconType;
-  color: string;
-}[] = [
-  { key: 'awaiting-payment', label: 'Awaiting Payment', icon: Clock, color: 'bg-yellow-500' },
-  { key: 'awaiting-pickup', label: 'Awaiting Pickup', icon: Package, color: 'bg-blue-500' },
-  { key: 'in-delivery', label: 'In Delivery', icon: Truck, color: 'bg-purple-500' },
-  { key: 'completed', label: 'Completed', icon: CheckCircle, color: 'bg-green-500' },
-  { key: 'issues', label: 'Issues', icon: XCircle, color: 'bg-red-500' }
+const ORDER_STATUSES = [
+  { key: 'awaiting-payment' as StatusKey, label: 'Awaiting Payment', icon: Clock, color: 'bg-yellow-500' },
+  { key: 'awaiting-pickup' as StatusKey, label: 'Awaiting Pickup', icon: Package, color: 'bg-blue-500' },
+  { key: 'in-delivery' as StatusKey, label: 'In Delivery', icon: Truck, color: 'bg-purple-500' },
+  { key: 'completed' as StatusKey, label: 'Completed', icon: CheckCircle, color: 'bg-green-500' },
+  { key: 'issues' as StatusKey, label: 'Issues', icon: XCircle, color: 'bg-red-500' }
 ];
 
 const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; count: number }> = ({ status, count }) => {
   const router = useRouter();
   const handleClick = () => {
-    // Navigate to Active Orders page with a suitable query param (filter)
     const params = new URLSearchParams();
     switch (status.key) {
       case 'awaiting-payment':
@@ -148,7 +489,6 @@ const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; cou
       default:
         params.set('status', status.key);
     }
-
     router.push(`/admin/active-orders?${params.toString()}`);
   };
 
@@ -156,7 +496,7 @@ const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; cou
     <button
       onClick={handleClick}
       aria-label={`View orders: ${status.label}`}
-      className="flex-1 bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-lg transition-transform transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-indigo-500 animate-fade-in animate-preserve"
+      className="flex-1 bg-white border border-gray-200 rounded-lg p-4 text-left hover:shadow-lg transition-transform transform hover:-translate-y-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
       title={status.label}
     >
       <div className="flex items-center">
@@ -173,7 +513,6 @@ const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; cou
 };
 
 const OrderFlowPanel: React.FC = () => {
-  // Static mock counts for now — replace with real-time backend data when available
   const counts: Record<StatusKey, number> = {
     'awaiting-payment': 45,
     'awaiting-pickup': 62,
@@ -183,31 +522,68 @@ const OrderFlowPanel: React.FC = () => {
   };
 
   return (
-    <div className="bg-white rounded-lg border border-gray-200 mb-8">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.1 }}
+      className="bg-white rounded-lg border border-gray-200 mb-8"
+    >
       <div className="px-6 py-4 border-b border-gray-200 flex items-center justify-between">
         <h2 className="text-lg font-semibold text-gray-900">Order Flow Status</h2>
-        <span className="text-xs text-gray-500">Static counts (mock)</span>
+        <span className="text-xs text-gray-500">Click to filter orders</span>
       </div>
       <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         {ORDER_STATUSES.map(s => (
           <OrderStatusButton key={s.key} status={s} count={counts[s.key]} />
         ))}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
-interface SystemHealthItemProps { service: string; status: string; icon: IconType; delay?: number }
-
-const SystemHealthItem: React.FC<SystemHealthItemProps> = ({ service, status, icon: Icon, delay }) => (
-  <div className="flex items-center justify-between p-3 animate-fade-in animate-preserve" style={{ animationDelay: `${delay ?? 0}ms` }}>
+// System Health Component
+const SystemHealthItem: React.FC<{ service: string; status: string; icon: IconType; delay?: number }> = ({ service, status, icon: Icon, delay }) => (
+  <motion.div
+    initial={{ opacity: 0, x: -20 }}
+    animate={{ opacity: 1, x: 0 }}
+    transition={{ delay }}
+    className="flex items-center justify-between p-3"
+  >
     <div className="flex items-center">
       <Icon className="w-5 h-5 text-gray-400 mr-3" />
       <span className="text-sm font-medium text-gray-900">{service}</span>
     </div>
     <StatusBadge status={status} />
-  </div>
+  </motion.div>
 );
+
+// Quick Actions Card Component
+const QuickActionsCard = () => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.8 }}
+      className="bg-white rounded-lg border border-gray-200"
+    >
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
+        <p className="text-sm text-gray-500 mt-1">Frequently used admin actions</p>
+      </div>
+      <div className="p-6 space-y-3">
+        <ActionButton icon={Users} label="Verify New Merchant" variant="primary" delay={0} />
+        <ActionButton icon={Megaphone} label="Create Broadcast" delay={0.1} />
+        <ActionButton icon={Wallet} label="View Pending Payouts" delay={0.2} />
+        <ActionButton icon={Download} label="Download Daily Report" delay={0.3} />
+      </div>
+      <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+        <p className="text-xs text-gray-500">
+          Need help? <a href="#" className="text-blue-600 hover:text-blue-700">View admin guide →</a>
+        </p>
+      </div>
+    </motion.div>
+  );
+};
 
 // Main Dashboard Component
 const Dashboard: React.FC = () => {
@@ -221,30 +597,37 @@ const Dashboard: React.FC = () => {
         <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900 animate-slide-up animate-preserve">Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
               <p className="text-sm text-gray-600 mt-1">Marketplace overview and system status</p>
             </div>
             <div className="flex gap-2">
-              {(['today', '7days', '30days'] as const).map((filter, i) => (
-                <button
+              {(['today', '7days', '30days'] as const).map((filter) => (
+                <motion.button
                   key={filter}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.1 }}
                   onClick={() => setTimeFilter(filter)}
-                  style={{ animationDelay: `${i * 80}ms` }}
-                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors animate-fade-in animate-preserve ${
+                  className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                     timeFilter === filter
                       ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
                   {filter === 'today' ? 'Today' : filter === '7days' ? 'Last 7 days' : 'Last 30 days'}
-                </button>
+                </motion.button>
               ))}
             </div>
           </div>
         </div>
 
         {/* Key Metrics */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
           <StatCard
             label="Total Marketplace Value"
             value="₦12.4M"
@@ -277,80 +660,36 @@ const Dashboard: React.FC = () => {
             icon={Truck}
             delay={240}
           />
-        </div>
+        </motion.div>
 
-        {/* Order Flow Status (interactive) */}
+        {/* Order Flow Status */}
         <OrderFlowPanel />
 
-        {/* Two Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          
-          {/* Demand / Order Velocity */}
-          <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Order Velocity by Zone</h2>
-            </div>
-            <div className="p-6">
-              <div className="space-y-4">
-                {[
-                  { zone: 'Ikeja', orders: 89, percentage: 85 },
-                  { zone: 'Victoria Island', orders: 67, percentage: 65 },
-                  { zone: 'Lekki', orders: 54, percentage: 52 },
-                  { zone: 'Surulere', orders: 43, percentage: 41 },
-                  { zone: 'Yaba', orders: 38, percentage: 36 }
-                ].map((item) => (
-                  <div key={item.zone}>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-sm font-medium text-gray-900">{item.zone}</span>
-                      <span className="text-sm text-gray-600">{item.orders} orders</span>
-                    </div>
-                    <div className="w-full bg-gray-200 rounded-full h-2">
-                      <div
-                        className="bg-blue-600 h-2 rounded-full transition-all"
-                        style={{ width: `${item.percentage}%` }}
-                      />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* System Health Monitor */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">System Health</h2>
-            </div>
-            <div className="divide-y divide-gray-200">
-              <SystemHealthItem
-                service="WhatsApp API"
-                status="Operational"
-                icon={MessageSquare}
-                delay={0}
-              />
-              <SystemHealthItem
-                service="Payment Gateway"
-                status="Operational"
-                icon={CreditCard}
-                delay={80}
-              />
-              <SystemHealthItem
-                service="Delivery Partner"
-                status="Degraded"
-                icon={MapPin}
-                delay={160}
-              />
-            </div>
-          </div>
+        {/* Charts Section - Row 1 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+          <RevenueTrendChart />
+          <CategoryPerformanceChart />
         </div>
 
-        {/* Bottom Section */}
+        {/* Charts Section - Row 2 */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          <MerchantComparisonChart />
+          <GeographicHeatMap />
+        </div>
+
+        {/* Bottom Three Columns Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
+          {/* Order Velocity Radar */}
+          <div className="lg:col-span-1">
+            <OrderVelocityChart />
+          </div>
+
           {/* Alerts & Exceptions */}
-          <div className="lg:col-span-2 bg-white rounded-lg border border-gray-200">
+          <div className="lg:col-span-1 bg-white rounded-lg border border-gray-200">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-semibold text-gray-900">Alerts & Exceptions</h2>
+              <p className="text-sm text-gray-500 mt-1">Requires immediate attention</p>
             </div>
             <div className="divide-y divide-gray-200">
               <AlertItem
@@ -363,36 +702,59 @@ const Dashboard: React.FC = () => {
                 type="payment"
                 message="3 payment failures requiring manual verification"
                 time="25 minutes ago"
-                delay={80}
+                delay={0.1}
               />
               <AlertItem
                 type="stock"
                 message="Low stock alert: 'Fresh Tomatoes' in 2 merchant stores"
                 time="1 hour ago"
-                delay={160}
+                delay={0.2}
               />
               <AlertItem
                 type="delivery"
                 message="Delivery partner API response time elevated"
                 time="2 hours ago"
-                delay={240}
+                delay={0.3}
               />
             </div>
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white rounded-lg border border-gray-200">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Quick Actions</h2>
-            </div>
-            <div className="p-6 space-y-3">
-              <ActionButton icon={Users} label="Verify New Merchant" variant="primary" delay={0} />
-              <ActionButton icon={Megaphone} label="Create Broadcast" delay={80} />
-              <ActionButton icon={Wallet} label="View Pending Payouts" delay={160} />
-              <ActionButton icon={Download} label="Download Daily Report" delay={240} />
-            </div>
-          </div>
+          {/* Quick Actions - Added Back */}
+          <QuickActionsCard />
         </div>
+
+        {/* System Health Monitor */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.9 }}
+          className="mt-8 bg-white rounded-lg border border-gray-200"
+        >
+          <div className="px-6 py-4 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">System Health Monitor</h2>
+            <p className="text-sm text-gray-500 mt-1">Real-time service status</p>
+          </div>
+          <div className="divide-y divide-gray-200">
+            <SystemHealthItem
+              service="WhatsApp API"
+              status="Operational"
+              icon={MessageSquare}
+              delay={0}
+            />
+            <SystemHealthItem
+              service="Payment Gateway"
+              status="Operational"
+              icon={CreditCard}
+              delay={0.1}
+            />
+            <SystemHealthItem
+              service="Delivery Partner"
+              status="Degraded"
+              icon={MapPin}
+              delay={0.2}
+            />
+          </div>
+        </motion.div>
 
       </div>
     </div>

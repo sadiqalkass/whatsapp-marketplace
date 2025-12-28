@@ -45,7 +45,7 @@ const mockPrices: ProductPrice[] = [
     productName: 'Wireless Bluetooth Headphones',
     merchant: 'TechGear Nigeria',
     merchantId: 'M002',
-    wholesalePrice: 15000,
+    wholesalePrice: 18000,
     markup: 35,
     retailPrice: 20250,
     margin: 25.93,
@@ -97,15 +97,13 @@ const StatusToggle = ({
   return (
     <button
       onClick={() => onChange(status === 'Active' ? 'Inactive' : 'Active')}
-      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-        status === 'Active' ? 'bg-green-600' : 'bg-gray-300'
-      }`}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${status === 'Active' ? 'bg-green-600' : 'bg-gray-300'
+        }`}
       aria-label={`Toggle status: ${status}`}
     >
       <span
-        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-          status === 'Active' ? 'translate-x-6' : 'translate-x-1'
-        }`}
+        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${status === 'Active' ? 'translate-x-6' : 'translate-x-1'
+          }`}
       />
     </button>
   );
@@ -148,9 +146,8 @@ const PriceInput = ({
             handleBlur();
           }
         }}
-        className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 ${
-          isEditing ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'
-        }`}
+        className={`w-20 px-2 py-1 text-sm border rounded focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-gray-100 ${isEditing ? 'border-blue-500' : 'border-gray-300 dark:border-gray-600'
+          }`}
         aria-label="Markup percentage"
       />
       <span className="text-sm text-gray-500 dark:text-gray-400">%</span>
@@ -233,6 +230,14 @@ export default function PricingManagerPage() {
     }
   };
 
+  const calculateRetailPrice = (wholesale: number, markup: number): number => {
+    return wholesale + (wholesale * markup) / 100;
+  };
+
+  const calculateMargin = (wholesale: number, retail: number): number => {
+    return ((retail - wholesale) / retail) * 100;
+  };
+
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header Section */}
@@ -247,7 +252,7 @@ export default function PricingManagerPage() {
 
       {/* Info Banner */}
       <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-6 flex items-start gap-3">
-        <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+        <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5" />
         <div className="text-sm text-blue-800 dark:text-blue-200">
           <p className="font-medium mb-1">Pricing Control</p>
           <p>
@@ -367,7 +372,7 @@ export default function PricingManagerPage() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="bg-green-50 dark:bg-green-900/20 px-3 py-1.5 rounded border border-green-200 dark:border-green-800 inline-block">
                       <span className="text-sm font-bold text-green-700 dark:text-green-400">
-                        ₦{price.retailPrice.toLocaleString()}
+                        ₦{calculateRetailPrice(price.wholesalePrice, price.markup).toLocaleString()}
                       </span>
                     </div>
                   </td>
@@ -375,7 +380,7 @@ export default function PricingManagerPage() {
                     <div className="flex items-center gap-2">
                       <TrendingUp className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                       <span className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                        {price.margin.toFixed(2)}%
+                        {calculateMargin(price.wholesalePrice, price.retailPrice).toFixed(2)}%
                       </span>
                     </div>
                   </td>
