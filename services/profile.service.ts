@@ -42,6 +42,16 @@ export const profileService = {
     return response.data;
   },
 
+  updateMerchantProfile: async (data: {
+    businessName: string;
+    category: string;
+    location: string;
+    phone: string;
+  }) => {
+    const response = await api.put('/merchant/profile', data);
+    return response.data;
+  },
+
   changeMerchantPassword: async (data: ChangePasswordData) => {
     const response = await api.patch('/merchant/password', data);
     return response.data;
