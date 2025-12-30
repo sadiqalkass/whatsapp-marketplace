@@ -47,14 +47,27 @@ export const adminMerchantService = {
   },
 
   // Get all merchants (with optional status filter)
-  getAllMerchants: async (status?: 'PENDING' | 'VERIFIED' | 'REJECTED') => {
-    const url = status 
-      ? `/admin/merchants?status=${status}` 
-      : '/admin/merchants';
-    const response = await api.get<{ success: boolean; data: Merchant[] }>(url);
+  getAllMerchants: async (
+    status?: 'PENDING' | 'VERIFIED' | 'REJECTED',
+    limit?: number,
+    skip?: number
+  ) => {
+    const params = new URLSearchParams();
+    if (status) params.append('status', status);
+    if (limit !== undefined) params.append('limit', limit.toString());
+    if (skip !== undefined) params.append('skip', skip.toString());
+    
+    const url = `/admin/merchants${params.toString() ? '?' + params.toString() : ''}`;
+    const response = await api.get<{ 
+      success: boolean; 
+      data: Merchant[];
+      total: number;
+      limit: number;
+      skip: number;
+    }>(url);
     return response.data;
   },
-
+   
   // Get merchant details
   getMerchantDetails: async (merchantId: string) => {
     const response = await api.get<{ success: boolean; data: Merchant }>(

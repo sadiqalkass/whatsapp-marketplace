@@ -33,6 +33,37 @@ interface OnboardingMerchant {
   registrationNumber?: string;
 }
 
+interface Merchant {
+  id: string;
+  businessName: string;
+  category: string;
+  verification: {
+    idVerificationStatus: string;
+    locationVerificationStatus: string;
+    productSampleStatus: string;
+    businessLicenseStatus: string | null;
+    businessLicenseUrl: string | null;
+    governmentIdUrl: string;
+    productSampleUrl: string;
+    businessAddress: string;
+    registrationNumber: string | null;
+    idVerifiedAt: string | null;
+    locationVerifiedAt: string | null;
+    productSampleVerifiedAt: string | null;
+    businessLicenseVerifiedAt: string | null;
+    idRejectionReason: string | null;
+    locationRejectionReason: string | null;
+    productRejectionReason: string | null;
+    businessLicenseRejectionReason: string | null;
+  };
+  createdAt: string;
+  user: {
+    email: string;
+  };
+  phone: string;
+  location: string;
+}
+
 const StepStatusIcon = ({ status }: { status: StepStatus }) => {
   if (status === 'approved') {
     return <CheckCircle className="w-5 h-5 text-green-600" />;
@@ -289,16 +320,22 @@ export default function OnboardingPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
+  console.log('component render - loading:', loading, 'merchants:', merchants.length)
+
   useEffect(() => {
+    console.log('useEffect running')
     fetchPendingMerchants();
-  }, []);
+  }, [])
 
   const fetchPendingMerchants = async () => {
     try {
+      console.log('Fetching merchants...')
       setLoading(true);
       setError('');
       const response = await adminMerchantService.getPendingMerchants();
-      
+
+      console.log('Response:', response);
+
       const transformedMerchants = response.data.map(m => {
         const steps: OnboardingStep[] = [
           {
@@ -367,10 +404,14 @@ export default function OnboardingPage() {
       });
 
       setMerchants(transformedMerchants);
+      console.log('Transformed:', transformedMerchants);
+      console.log('Count:', transformedMerchants.length);
+      console.log('Loading State:', loading);
     } catch (err: any) {
       setError(err.response?.data?.message || 'Failed to load merchants');
     } finally {
       setLoading(false);
+      console.log('Loading set to false');
     }
   };
 
@@ -428,12 +469,15 @@ export default function OnboardingPage() {
 
         await adminMerchantService.rejectStep(merchantId, stepMap[stepId], reason);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Action failed';
-    alert(errorMessage);
+    } catch (err: any) {
+      const errorMessage = err.response?.data?.message || err.message || 'Action failed';
+      setError(errorMessage);
+      setTimeout(() => setError(''), 5000);
+    }
   };
 
   if (loading) {
+    console.log('Returning loading screen');
     return (
       <div className="flex-1 min-h-full flex items-center justify-center">
         <div className="text-gray-600">Loading merchants...</div>
@@ -441,25 +485,19 @@ export default function OnboardingPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="flex-1 min-h-full flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-red-600 mb-4">{error}</p>
-          <button
-            onClick={fetchPendingMerchants}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
+  console.log('Passed loading check')
+
+  console.log('Rendering main UI');
 
   return (
     <div className="flex-1 min-h-full px-4 sm:px-6 lg:px-8 py-8">
       <div className="max-w-7xl mx-auto">
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 rounded-lg p-4">
+            <p className="text-red-800 text-sm">{error}</p>
+          </div>
+        )}
+
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Merchant Onboarding</h1>
           <p className="text-gray-600">Track and approve new merchants step by step</p>
@@ -492,4 +530,4 @@ export default function OnboardingPage() {
       </div>
     </div>
   );
-}}
+}
