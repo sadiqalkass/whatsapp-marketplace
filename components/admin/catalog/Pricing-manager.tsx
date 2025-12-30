@@ -68,6 +68,10 @@ const PriceInput = ({
   const [localValue, setLocalValue] = useState(value.toString());
   const [isEditing, setIsEditing] = useState(false);
 
+  useEffect(() => {
+    setLocalValue(value.toString());
+  }, [value]);
+
   const handleBlur = () => {
     const numValue = parseFloat(localValue);
     if (!isNaN(numValue) && numValue >= 0) {
@@ -211,14 +215,6 @@ export default function PricingManagerPage() {
     }
   };
 
-  const calculateRetailPrice = (wholesale: number, markup: number): number => {
-    return wholesale + (wholesale * markup) / 100;
-  };
-
-  const calculateMargin = (wholesale: number, retail: number): number => {
-    return ((retail - wholesale) / retail) * 100;
-  };
-
   return (
     <div className="p-6 max-w-7xl mx-auto">
       {/* Header Section */}
@@ -352,7 +348,7 @@ export default function PricingManagerPage() {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <PriceInput
-                          value={price.markup}
+                          value={price.markup || 0}
                           onChange={(newMarkup) => handleMarkupChange(price.id, newMarkup)}
                           onSave={() => console.log('Saved markup for', price.id)}
                         />
@@ -440,6 +436,7 @@ export default function PricingManagerPage() {
             </div>
           )}
       </>
-    )};
-  );
+    )}
+  </div>
+);
 }
