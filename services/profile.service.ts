@@ -37,6 +37,15 @@ export const profileService = {
   },
 
   // Merchant profile
+  submitMerchantVerification: async (formData: FormData) => {
+    const response = await api.post('/merchant/verification', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
   getMerchantProfile: async () => {
     const response = await api.get('/merchant/profile');
     return response.data;
@@ -54,6 +63,21 @@ export const profileService = {
 
   changeMerchantPassword: async (data: ChangePasswordData) => {
     const response = await api.patch('/merchant/password', data);
+    return response.data;
+  },
+
+  // Product methods
+  createProduct: async (formData: FormData) => {
+    const response = await api.post('/merchant/products', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return response.data;
+  },
+
+  getMerchantProducts: async () => {
+    const response = await api.get('/merchant/products');
     return response.data;
   },
 };

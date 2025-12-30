@@ -4,7 +4,7 @@ import { CheckCircle, Clock, Edit2 } from 'lucide-react';
 type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 interface VerificationSectionProps {
-  verificationStatus: VerificationStatus;
+  verificationStatus?: VerificationStatus;
   onSubmit: (data: FormData) => Promise<void>;
 }
 
@@ -31,8 +31,10 @@ export default function VerificationSection({ verificationStatus, onSubmit }: Ve
     };
   };
 
-  const verificationConfig = getVerificationConfig(verificationStatus);
-  const VerificationIcon = verificationConfig.icon;
+  const verificationConfig = verificationStatus 
+    ? getVerificationConfig(verificationStatus)
+    : null;
+  const VerificationIcon = verificationConfig?.icon;
 
   const handleFileChange = (
     e: React.ChangeEvent<HTMLInputElement>,
@@ -88,15 +90,17 @@ export default function VerificationSection({ verificationStatus, onSubmit }: Ve
         {/* Current Status */}
         <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-700/50 rounded-lg">
           <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                Verification Status
-              </p>
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-semibold rounded-full ${verificationConfig.color}`}>
-                <VerificationIcon size={16} />
-                {verificationConfig.label}
-              </span>
-            </div>
+            {verificationConfig && (
+              <div>
+                <p className="text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Verification Status
+                </p>
+                <span className={`inline-flex items-center gap-1.5 px-3 py-1 text-sm font-semibold rounded-full ${verificationConfig.color}`}>
+                  <verificationConfig.icon size={16} />
+                  {verificationConfig.label}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 

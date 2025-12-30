@@ -4,7 +4,7 @@ import { CheckCircle, Clock } from 'lucide-react';
 type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
 interface ProfileHeaderProps {
-  verificationStatus: VerificationStatus;
+  verificationStatus?: VerificationStatus;
   hasSubmittedVerification: boolean;
 }
 
@@ -24,8 +24,8 @@ export default function ProfileHeader({ verificationStatus, hasSubmittedVerifica
     };
   };
 
-  const verificationConfig = getVerificationConfig(verificationStatus);
-  const VerificationIcon = verificationConfig.icon;
+  const verificationConfig = verificationStatus ? getVerificationConfig(verificationStatus) : null;
+  const VerificationIcon = verificationConfig?.icon;
 
   return (
     <div className="mb-6">
@@ -38,7 +38,7 @@ export default function ProfileHeader({ verificationStatus, hasSubmittedVerifica
             Manage your account information
           </p>
         </div>
-        {hasSubmittedVerification && (
+        {hasSubmittedVerification && verificationConfig && (
           <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold rounded-full ${verificationConfig.color}`}>
             <VerificationIcon size={16} />
             {verificationConfig.label}

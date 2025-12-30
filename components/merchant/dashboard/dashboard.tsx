@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Package, 
   ShoppingBag, 
@@ -45,6 +45,7 @@ import {
   PolarAngleAxis,
   PolarRadiusAxis
 } from 'recharts';
+import { profileService } from '@/services/profile.service';
 
 // Animation variants
 const containerVariants = {
@@ -417,9 +418,32 @@ const CustomerMetrics = () => {
 
 // Merchant Dashboard Component
 const MerchantDashboard = () => {
-  const [verificationStatus, setVerificationStatus] = useState('not_verified');
-  const [rejectionReason, setRejectionReason] = useState('Business license document is unclear. Please upload a clearer image.');
   const [timeFilter, setTimeFilter] = useState<'today' | '7days' | '30days'>('today');
+  const [profile, setProfile] = useState<any>(null);
+  const [productCount, setProductCount] = useState(0);
+  const verificationStatus = profile?.verificationStatus || 'PENDING';
+  const rejectionReason = profile?.verification?.rejectionReason || '';
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [profileRes, productsRes] = await Promise.all([
+          profileService.getMerchantProfile(),
+          profileService.getMerchantProducts()
+        ]);
+        
+        setProfile(profileRes.data);
+        
+        if (productsRes.data) {
+          setProductCount(productsRes.data.length);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      }
+    };
+    
+    fetchData();
+  }, []);
 
   const summaryData = {
     ordersToPrepare: 8,
@@ -506,56 +530,69 @@ const MerchantDashboard = () => {
         </div>
 
         {/* Verification Status Card */}
-        {verificationStatus !== 'verified' && (
+        {verificationStatus !== 'VERIFIED' && profile && (
           <motion.div
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
             className="mb-8"
           >
             <div className={`bg-white rounded-lg shadow border-l-4 p-6 ${
-              verificationStatus === 'rejected' ? 'border-red-500' : 
-              verificationStatus === 'under_review' ? 'border-blue-500' : 
+              verificationStatus === 'REJECTED' ? 'border-red-500' : 
+              verificationStatus === 'PENDING' ? 'border-blue-500' : 
               'border-yellow-500'
             }`}>
               <div className="flex items-center justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
-                    {verificationStatus === 'rejected' ? (
+                    {verificationStatus === 'REJECTED' ? (
                       <AlertTriangle className="w-6 h-6 text-red-600" />
-                    ) : verificationStatus === 'under_review' ? (
+                    ) : verificationStatus === 'PENDING' ? (
                       <Clock className="w-6 h-6 text-blue-600" />
                     ) : (
                       <AlertTriangle className="w-6 h-6 text-yellow-600" />
                     )}
                     <h2 className="text-xl font-semibold text-gray-900">
-                      {verificationStatus === 'rejected' ? 'Verification Rejected' :
-                      verificationStatus === 'under_review' ? 'Verification Under Review' :
-                      'Verification Required'}
+                      {verificationStatus === 'REJECTED' ? 'Verification Rejected' : 'Verification Pending'}
                     </h2>
                   </div>
                   <p className="text-gray-600 mb-4">
-                    {verificationStatus === 'rejected' ? (
+                    {verificationStatus === 'REJECTED' ? (
                       <>Your verification was rejected. Reason: {rejectionReason}</>
-                    ) : verificationStatus === 'under_review' ? (
-                      'Your verification documents are being reviewed. We\'ll notify you once complete.'
                     ) : (
-                      'Your account is not yet verified. Complete verification to start receiving orders.'
+                      'Your verification documents are being reviewed. We\'ll notify you once complete.'
                     )}
                   </p>
-                  {(verificationStatus === 'not_verified' || verificationStatus === 'rejected') && (
+                  {verificationStatus === 'REJECTED' && (
                     <Link href="/merchant/profile">
-                      <button className={`font-medium px-6 py-2 rounded-lg transition-colors ${
-                        verificationStatus === 'rejected' 
-                          ? 'bg-red-500 hover:bg-red-600 text-white'
-                          : 'bg-orange-500 hover:bg-orange-600 text-white'
-                      }`}>
-                        {verificationStatus === 'rejected' ? 'Resubmit Verification' : 'Complete Verification'}
+                      <button className="bg-red-500 hover:bg-red-600 text-white font-medium px-6 py-2 rounded-lg transition-colors">
+                        Resubmit Verification
                       </button>
                     </Link>
                   )}
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {verificationStatus === 'VERIFIED' && productCount === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mb-8 bg-green-50 border border-green-200 rounded-lg p-6"
+          >
+            <div className="flex items-center gap-3 mb-3">
+              <CheckCircle className="w-6 h-6 text-green-600" />
+              <h2 className="text-xl font-semibold text-gray-900">Account Verified!</h2>
+            </div>
+            <p className="text-gray-600 mb-4">
+              Your account is verified. You can now add products to start selling.
+            </p>
+            <Link href="/merchant/products">
+              <button className="bg-green-600 hover:bg-green-700 text-white font-medium px-6 py-2 rounded-lg transition-colors">
+                Add Your First Product
+              </button>
+            </Link>
           </motion.div>
         )}
 
@@ -578,7 +615,7 @@ const MerchantDashboard = () => {
           />
           <SummaryCard
             title="Products Listed"
-            value={summaryData.productsListed}
+            value={productCount}
             icon={ShoppingBag}
             color="text-blue-500"
             trend="up"

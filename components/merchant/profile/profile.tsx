@@ -17,7 +17,7 @@ interface MerchantProfileData {
   location: string;
   phone: string;
   profilePictureUrl: string;
-  verificationStatus?: VerificationStatus; // optional until user submits
+  verificationStatus?: VerificationStatus;
   user?: {
     email: string;
   };
@@ -76,10 +76,15 @@ export default function MerchantProfilePage() {
 
   const handlePhoneUpdate = async (phone: string) => {
     try {
+      if (!realProfile?.businessName || !realProfile?.category || !realProfile?.location) {
+        alert('Please fill in business information first');
+        return;
+      }
+
       await profileService.updateMerchantProfile({
-        businessName: realProfile?.businessName || '',
-        category: realProfile?.category || '',
-        location: realProfile?.location || '',
+        businessName: realProfile.businessName,
+        category: realProfile.category,
+        location: realProfile.location,
         phone
       });
       fetchProfile();
@@ -97,34 +102,27 @@ export default function MerchantProfilePage() {
     setProfilePictureUrl(previewUrl);
   };
 
-  const handleVerificationSubmit = async (formData: FormData) => {
-    if (realProfile) {
-      formData.append('businessName', realProfile.businessName || '');
-      formData.append('category', realProfile.category || '');
-      formData.append('location', realProfile.location || '');
-      formData.append('phone', realProfile.phone || '');
+ const handleVerificationSubmit = async (formData: FormData) => {
+    if (!realProfile?.businessName || !realProfile?.category || !realProfile?.location) {
+      alert('Please complete your business information first');
+      return;
     }
+
+    formData.append('businessName', realProfile.businessName);
+    formData.append('category', realProfile.category);
+    formData.append('location', realProfile.location);
+    formData.append('phone', realProfile.phone || '');
 
     if (profilePicture) {
       formData.append('profilePicture', profilePicture);
     }
 
     try {
-      const response = await fetch('/api/merchant/verification', {
-        method: 'POST',
-        body: formData
-      });
-
-      const data = await response.json();
-
-      if (response.ok) {
-        alert('Verification submitted successfully');
-        fetchProfile();
-      } else {
-        alert(data.message || 'Submission failed');
-      }
-    } catch (error) {
-      alert('Error submitting verification');
+      await profileService.submitMerchantVerification(formData);
+      alert('Verification submitted successfully');
+      fetchProfile();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Error submitting verification');
       console.error(error);
       throw error;
     }
@@ -165,7 +163,7 @@ export default function MerchantProfilePage() {
     }
   };
 
-  const hasSubmittedVerification = realProfile?.verificationStatus !== undefined;
+  const hasSubmittedVerification = realProfile?.verificationStatus !== undefined !== null;
 
   if (loading) {
     return (
@@ -175,38 +173,30 @@ export default function MerchantProfilePage() {
     );
   }
 
-  if (!realProfile) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p className="text-gray-600">No profile found</p>
-      </div>
-    );
-  }
-
   return (
     <div className="p-6 lg:p-8 max-w-5xl mx-auto">
       <ProfileHeader
-        verificationStatus={realProfile.verificationStatus}
+        verificationStatus={realProfile?.verificationStatus as VerificationStatus | undefined}
         hasSubmittedVerification={hasSubmittedVerification}
       />
 
       <BusinessInfoSection
-        businessName={realProfile.businessName}
-        category={realProfile.category}
-        location={realProfile.location}
+        businessName={realProfile?.businessName || ''}
+        category={realProfile?.category || ''}
+        location={realProfile?.location || ''}
         profilePictureUrl={profilePictureUrl}
         onUpdate={handleBusinessInfoUpdate}
         onProfilePictureChange={handleProfilePictureChange}
       />
 
       <ContactDetailsSection
-        email={realProfile.user?.email || ''}
-        phone={realProfile.phone}
+        email={realProfile?.user?.email || ''}
+        phone={realProfile?.phone || ''}
         onUpdatePhone={handlePhoneUpdate}
       />
 
       <VerificationSection
-        verificationStatus={realProfile.verificationStatus}
+        verificationStatus={realProfile?.verificationStatus}
         onSubmit={handleVerificationSubmit}
       />
 
