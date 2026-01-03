@@ -1,8 +1,9 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { DollarSign, Package, Clock, Eye, AlertCircle } from 'lucide-react';
 import { SummaryCardProps, EscrowOrder, StatusBadgeProps } from '@/Types/types';
+import { escrowApi } from '@/services/escrow.service';
 
 const SummaryCard = ({ title, value, icon: Icon, trend, className = '' }: SummaryCardProps) => {
   return (
@@ -41,67 +42,31 @@ const StatusBadge = ({ status, type = 'neutral' }: StatusBadgeProps) => {
   );
 };
 
-// Mock Data
-const mockEscrowData = [
-  {
-    orderId: 'ORD-2024-001',
-    customer: 'John Doe',
-    merchant: 'Fashion Hub',
-    orderAmount: '₦45,000',
-    heldAmount: '₦45,000',
-    deliveryStatus: 'Delivered',
-    escrowStatus: 'Held',
-    createdDate: '2024-12-18',
-    daysInEscrow: 2,
-  },
-  {
-    orderId: 'ORD-2024-002',
-    customer: 'Jane Smith',
-    merchant: 'Tech World',
-    orderAmount: '₦120,000',
-    heldAmount: '₦120,000',
-    deliveryStatus: 'In Transit',
-    escrowStatus: 'Held',
-    createdDate: '2024-12-15',
-    daysInEscrow: 5,
-  },
-  {
-    orderId: 'ORD-2024-003',
-    customer: 'Mike Johnson',
-    merchant: 'Food Mart',
-    orderAmount: '₦8,500',
-    heldAmount: '₦8,500',
-    deliveryStatus: 'Pending',
-    escrowStatus: 'Held',
-    createdDate: '2024-12-08',
-    daysInEscrow: 12,
-  },
-  {
-    orderId: 'ORD-2024-004',
-    customer: 'Sarah Williams',
-    merchant: 'Electronics Plus',
-    orderAmount: '₦250,000',
-    heldAmount: '₦250,000',
-    deliveryStatus: 'Delivered',
-    escrowStatus: 'Held',
-    createdDate: '2024-12-17',
-    daysInEscrow: 3,
-  },
-  {
-    orderId: 'ORD-2024-005',
-    customer: 'David Brown',
-    merchant: 'Fashion Hub',
-    orderAmount: '₦32,000',
-    heldAmount: '₦32,000',
-    deliveryStatus: 'Delivered',
-    escrowStatus: 'Held',
-    createdDate: '2024-12-10',
-    daysInEscrow: 10,
-  },
-];
-
 export default function EscrowPage() {
   const [selectedOrder, setSelectedOrder] = useState<EscrowOrder | null>(null);
+  const [escrowData, setEscrowData] = useState<any[]>([]);
+  const [stats, setStats] = useState({ totalInEscrow: 0, ordersInEscrow: 0, oldestEscrow: 0 });
+  const [loading, setLoading] = useState(true);
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [escrowRes, statsRes] = await Promise.all([
+        escrowApi.getAllEscrow(),
+        escrowApi.getEscrowStats(),
+      ]);
+      setEscrowData(escrowRes.data);
+      setStats(statsRes.data);
+    } catch (error) {
+      console.error('Failed to fetch escrow data:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData();
+  }, [])
 
   const getEscrowAgeColor = (days: number) => {
     if (days >= 10) return 'text-red-600 font-semibold';
@@ -114,10 +79,6 @@ export default function EscrowPage() {
     if (status === 'In Transit') return 'info';
     return 'warning';
   };
-
-  const totalInEscrow = '₦2,455,500';
-  const ordersInEscrow = mockEscrowData.length;
-  const oldestEscrow = Math.max(...mockEscrowData.map(d => d.daysInEscrow));
 
   return (
     <div className="min-h-screen">
@@ -132,31 +93,31 @@ export default function EscrowPage() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           <SummaryCard
             title="Total Funds in Escrow"
-            value={totalInEscrow}
+            value={`₦${stats.totalInEscrow.toLocaleString()}`}
             icon={DollarSign}
             trend={{ value: '12% from last week', isPositive: true }}
           />
           <SummaryCard
             title="Orders in Escrow"
-            value={ordersInEscrow}
+            value={stats.ordersInEscrow}
             icon={Package}
             trend={{ value: '8% from last week', isPositive: false }}
           />
           <SummaryCard
             title="Oldest Escrow Age"
-            value={`${oldestEscrow} days`}
+            value={`${stats.oldestEscrow} days`}
             icon={Clock}
           />
         </div>
 
         {/* Alert for Aging Escrows */}
-        {oldestEscrow >= 10 && (
+        {stats.oldestEscrow >= 10 && (
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 flex items-start">
             <AlertCircle className="w-5 h-5 text-yellow-600 mt-0.5 mr-3" />
             <div>
               <p className="text-sm font-medium text-yellow-800">Aging Escrows Detected</p>
               <p className="text-sm text-yellow-700 mt-1">
-                You have {mockEscrowData.filter(d => d.daysInEscrow >= 10).length} escrow(s) older than 10 days. Please review and take action.
+                You have {escrowData.filter(d => d.daysInEscrow >= 10).length} escrow(s) older than 10 days. Please review and take action.
               </p>
             </div>
           </div>
@@ -201,48 +162,60 @@ export default function EscrowPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {mockEscrowData.map((escrow, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {escrow.orderId}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {escrow.customer}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {escrow.merchant}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {escrow.orderAmount}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
-                      {escrow.heldAmount}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <StatusBadge 
-                        status={escrow.deliveryStatus} 
-                        type={getDeliveryStatusType(escrow.deliveryStatus)}
-                      />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <StatusBadge status={escrow.escrowStatus} type="warning" />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={getEscrowAgeColor(escrow.daysInEscrow)}>
-                        {escrow.daysInEscrow}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <button
-                        onClick={() => setSelectedOrder(escrow)}
-                        className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                      >
-                        <Eye className="w-4 h-4 mr-1" />
-                        View
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {escrowData.length === 0 ? (
+                   <tr>
+                      <td colSpan={9} className="px-6 py-16 text-center">
+                        <Package className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                        <p className="text-gray-500 font-medium">No orders in escrow</p>
+                        <p className="text-sm text-gray-400 mt-1">
+                          Orders will appear here once payment is confirmed
+                        </p>
+                      </td>
+                    </tr>
+                ) : (
+                  escrowData.map((escrow, index) => (
+                    <tr key={index} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        {escrow.order.orderNumber}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {escrow.order.customerPhone}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        Merchant {escrow.merchantId.slice(0, 8)}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        ₦{escrow.amount.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">
+                        ₦{escrow.amount.toLocaleString()}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <StatusBadge 
+                          status={escrow.order.status} 
+                          type={getDeliveryStatusType(escrow.order.status)}
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <StatusBadge status={escrow.status} type="warning" />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <span className={getEscrowAgeColor(escrow.daysInEscrow)}>
+                          {escrow.daysInEscrow}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <button
+                          onClick={() => setSelectedOrder(escrow)}
+                          className="inline-flex items-center text-blue-600 hover:text-blue-800"
+                        >
+                          <Eye className="w-4 h-4 mr-1" />
+                          View
+                        </button>
+                      </td>
+                    </tr>
+                  )))
+              }
               </tbody>
             </table>
           </div>
@@ -265,38 +238,38 @@ export default function EscrowPage() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <p className="text-sm text-gray-600">Order ID</p>
-                    <p className="text-base font-semibold text-gray-900">{selectedOrder.orderId}</p>
+                    <p className="text-base font-semibold text-gray-900">{selectedOrder.order.orderNumber}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Customer</p>
-                    <p className="text-base font-semibold text-gray-900">{selectedOrder.customer}</p>
+                    <p className="text-base font-semibold text-gray-900">{selectedOrder.order.customerPhone}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Merchant</p>
-                    <p className="text-base font-semibold text-gray-900">{selectedOrder.merchant}</p>
+                    <p className="text-base font-semibold text-gray-900">Merchant {selectedOrder.merchantId.slice(0, 8)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Order Amount</p>
-                    <p className="text-base font-semibold text-gray-900">{selectedOrder.orderAmount}</p>
+                    <p className="text-base font-semibold text-gray-900">₦{selectedOrder.amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Held Amount</p>
-                    <p className="text-base font-semibold text-gray-900">{selectedOrder.heldAmount}</p>
+                    <p className="text-base font-semibold text-gray-900">₦{selectedOrder.amount.toLocaleString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Delivery Status</p>
                     <StatusBadge 
-                      status={selectedOrder.deliveryStatus} 
-                      type={getDeliveryStatusType(selectedOrder.deliveryStatus)}
+                      status={selectedOrder.order.status} 
+                      type={getDeliveryStatusType(selectedOrder.order.status)}
                     />
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Escrow Status</p>
-                    <StatusBadge status={selectedOrder.escrowStatus} type="warning" />
+                    <StatusBadge status={selectedOrder.status} type="warning" />
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Created Date</p>
-                    <p className="text-base font-semibold text-gray-900">{selectedOrder.createdDate}</p>
+                    <p className="text-base font-semibold text-gray-900">{new Date(selectedOrder.heldAt).toLocaleDateString()}</p>
                   </div>
                   <div>
                     <p className="text-sm text-gray-600">Days in Escrow</p>
