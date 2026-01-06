@@ -209,10 +209,6 @@ const mockWithdrawals: WithdrawalRequest[] = [
   },
 ];
 
-// ============================================
-// COMPONENTS
-// ============================================
-
 const SummaryCard = ({ 
   title, 
   value, 
@@ -379,10 +375,6 @@ export default function WalletManagementPage() {
   );
 }
 
-// ============================================
-// WALLET OVERVIEW TAB
-// ============================================
-
 function WalletOverview({ stats, loading }: { stats: LiquidityStats | null, loading: boolean }) {
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', {
@@ -510,10 +502,6 @@ function WalletOverview({ stats, loading }: { stats: LiquidityStats | null, load
     </div>
   );
 }
-
-// ============================================
-// WALLET LEDGER TAB
-// ============================================
 
 function WalletLedger() {
   const [searchQuery, setSearchQuery] = useState('');
@@ -793,10 +781,6 @@ function WalletLedger() {
     </div>
   );
 }
-
-// ============================================
-// WITHDRAWAL MANAGER TAB
-// ============================================
 
 function WithdrawalManager() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSING'>('all');
@@ -1228,13 +1212,7 @@ function TransactionHistoryModal({ walletId, onClose }: { walletId: string; onCl
   );
 }
 
-// ============================================
-// MANUAL ADJUSTMENT MODAL (Placeholder for completion)
-// ============================================
-
 function ManualAdjustmentModal({ onClose }: { onClose: () => void }) {
-  // This would be the full implementation as shown in previous response
-  // For brevity, showing a simple placeholder
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
