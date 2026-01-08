@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Shield, Mail, Clock, Key, Smartphone, Bell, Moon, CheckCircle, XCircle, AlertCircle, LogOut } from 'lucide-react';
 import { authService } from '@/services/auth.service';
 import { profileService } from '@/services/profile.service';
+import toast from 'react-hot-toast';
 
 const AdminProfile = () => {
   const [emailNotif, setEmailNotif] = useState(false);

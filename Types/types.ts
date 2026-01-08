@@ -100,6 +100,13 @@ export interface Merchant {
 }
 
 export interface Broadcast {
+  totalRecipients: number;
+  successfulSends: number;
+  description: any;
+  approvalStatus: boolean;
+  failedSends: undefined;
+  scheduledFor: string;
+  content: any;
   id: string;
   name: string;
   targetSegment: string;
@@ -204,6 +211,6 @@ export interface Order {
   quantity: number;
   status: OrderStatus;
   pickupTime: string;
-  orderDate: string; 
-  orderNotes?: string; 
+  orderDate: string;
+  orderNotes?: string;
 }
