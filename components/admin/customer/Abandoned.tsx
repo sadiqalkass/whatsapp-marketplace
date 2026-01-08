@@ -1,164 +1,83 @@
-"use client"
+'use client';
 
-import React, { useState } from 'react';
-import { ShoppingCart, Search, Bell, Tag, Clock, TrendingDown, AlertCircle, CheckCircle, Filter, ChevronDown } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ShoppingCart, Search, Bell, Clock, TrendingDown, AlertCircle, CheckCircle, Filter, ChevronDown, XCircle, RefreshCw } from 'lucide-react';
+import { abandonedOrderService } from '@/services/abadonedOrder.service';
 
-// Mock Data for Abandoned Carts
-const mockAbandonedCarts = [
-  {
-    id: 1,
-    customer: 'John Doe',
-    phone: '+234 801 234 5678',
-    items: [
-      { name: 'iPhone 13 Pro', quantity: 1, price: 520000 },
-      { name: 'AirPods Pro', quantity: 1, price: 89000 }
-    ],
-    cartValue: 609000,
-    timeAbandoned: '2 hours ago',
-    abandonedAt: new Date(Date.now() - 2 * 60 * 60 * 1000),
-    reminderSent: false,
-    discountApplied: false
-  },
-  {
-    id: 2,
-    customer: 'Sarah Williams',
-    phone: '+234 802 345 6789',
-    items: [
-      { name: 'Nike Air Max Sneakers', quantity: 2, price: 35000 }
-    ],
-    cartValue: 70000,
-    timeAbandoned: '5 hours ago',
-    abandonedAt: new Date(Date.now() - 5 * 60 * 60 * 1000),
-    reminderSent: true,
-    discountApplied: false
-  },
-  {
-    id: 3,
-    customer: 'Mike Johnson',
-    phone: '+234 803 456 7890',
-    items: [
-      { name: 'Samsung 55" Smart TV', quantity: 1, price: 380000 },
-      { name: 'Soundbar', quantity: 1, price: 75000 }
-    ],
-    cartValue: 455000,
-    timeAbandoned: '1 day ago',
-    abandonedAt: new Date(Date.now() - 24 * 60 * 60 * 1000),
-    reminderSent: true,
-    discountApplied: true
-  },
-  {
-    id: 4,
-    customer: 'Grace Adeyemi',
-    phone: '+234 804 567 8901',
-    items: [
-      { name: 'Designer Handbag', quantity: 1, price: 125000 }
-    ],
-    cartValue: 125000,
-    timeAbandoned: '3 hours ago',
-    abandonedAt: new Date(Date.now() - 3 * 60 * 60 * 1000),
-    reminderSent: false,
-    discountApplied: false
-  },
-  {
-    id: 5,
-    customer: 'David Brown',
-    phone: '+234 805 678 9012',
-    items: [
-      { name: 'Gaming Laptop', quantity: 1, price: 850000 },
-      { name: 'Gaming Mouse', quantity: 1, price: 15000 },
-      { name: 'Mechanical Keyboard', quantity: 1, price: 25000 }
-    ],
-    cartValue: 890000,
-    timeAbandoned: '6 hours ago',
-    abandonedAt: new Date(Date.now() - 6 * 60 * 60 * 1000),
-    reminderSent: false,
-    discountApplied: false
-  },
-  {
-    id: 6,
-    customer: 'Amina Hassan',
-    phone: '+234 806 789 0123',
-    items: [
-      { name: 'Blender Set', quantity: 1, price: 45000 },
-      { name: 'Toaster', quantity: 1, price: 18000 }
-    ],
-    cartValue: 63000,
-    timeAbandoned: '12 hours ago',
-    abandonedAt: new Date(Date.now() - 12 * 60 * 60 * 1000),
-    reminderSent: true,
-    discountApplied: false
-  },
-  {
-    id: 7,
-    customer: 'Peter Obidi',
-    phone: '+234 807 890 1234',
-    items: [
-      { name: 'Office Chair', quantity: 2, price: 95000 }
-    ],
-    cartValue: 190000,
-    timeAbandoned: '8 hours ago',
-    abandonedAt: new Date(Date.now() - 8 * 60 * 60 * 1000),
-    reminderSent: false,
-    discountApplied: false
-  },
-  {
-    id: 8,
-    customer: 'Blessing Okoro',
-    phone: '+234 808 901 2345',
-    items: [
-      { name: 'Yoga Mat', quantity: 1, price: 12000 },
-      { name: 'Dumbbells Set', quantity: 1, price: 35000 },
-      { name: 'Resistance Bands', quantity: 1, price: 8000 }
-    ],
-    cartValue: 55000,
-    timeAbandoned: '4 hours ago',
-    abandonedAt: new Date(Date.now() - 4 * 60 * 60 * 1000),
-    reminderSent: false,
-    discountApplied: false
-  }
-];
+type OrderItem = {
+  id: string;
+  productId: string;
+  quantity: number;
+  price: number;
+  product: {
+    id: string;
+    name: string;
+  };
+};
 
-type StatusBadgeProps = { reminderSent: boolean; discountApplied: boolean };
-const StatusBadge: React.FC<StatusBadgeProps> = ({ reminderSent, discountApplied }) => {
-  if (discountApplied) {
+type AbandonedOrder = {
+  id: string;
+  orderNumber: string;
+  customerPhone: string;
+  customerEmail: string;
+  totalAmount: number;
+  items: OrderItem[];
+  createdAt: string;
+  paymentExpiresAt: string | null;
+  timeRemaining: number;
+  isExpired: boolean;
+};
+
+type StatusBadgeProps = { isExpired: boolean; timeRemaining: number };
+const StatusBadge: React.FC<StatusBadgeProps> = ({ isExpired, timeRemaining }) => {
+  if (isExpired) {
     return (
-      <div className="flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-800 border border-purple-200 rounded-full text-xs font-medium">
-        <Tag className="w-3 h-3" />
-        Discount Applied
+      <div className="flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 border border-red-200 rounded-full text-xs font-medium">
+        <XCircle className="w-3 h-3" />
+        Expired
       </div>
     );
   }
-  
-  if (reminderSent) {
+
+  if (timeRemaining < 10) {
     return (
-      <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-xs font-medium">
-        <CheckCircle className="w-3 h-3" />
-        Reminder Sent
+      <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-full text-xs font-medium">
+        <AlertCircle className="w-3 h-3" />
+        Expiring Soon
       </div>
     );
   }
-  
+
   return (
-    <div className="flex items-center gap-1 px-2 py-1 bg-yellow-100 text-yellow-800 border border-yellow-200 rounded-full text-xs font-medium">
-      <AlertCircle className="w-3 h-3" />
-      No Action
+    <div className="flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 border border-blue-200 rounded-full text-xs font-medium">
+      <CheckCircle className="w-3 h-3" />
+      Active
     </div>
   );
 };
 
-type CartItem = { name: string; quantity: number; price: number };
-type Cart = { id: number; customer: string; phone: string; items: CartItem[]; cartValue: number; timeAbandoned: string; abandonedAt: Date; reminderSent: boolean; discountApplied: boolean };
+type OrderRowProps = {
+  order: AbandonedOrder;
+  onResendLink: (id: string) => void;
+  onCancelOrder: (id: string) => void;
+  onExtendTimeout: (id: string) => void;
+};
 
-type CartRowProps = { cart: Cart; onSendReminder: (id: number) => void; onApplyDiscount: (id: number) => void };
-// CartRow Component
-const CartRow: React.FC<CartRowProps> = ({ cart, onSendReminder, onApplyDiscount }) => {
+const OrderRow: React.FC<OrderRowProps> = ({ order, onResendLink, onCancelOrder, onExtendTimeout }) => {
   const [expanded, setExpanded] = useState(false);
 
   const getUrgencyColor = () => {
-    const hoursAgo = (Date.now() - cart.abandonedAt.getTime()) / (1000 * 60 * 60);
-    if (hoursAgo < 4) return 'text-green-600';
-    if (hoursAgo < 12) return 'text-yellow-600';
-    return 'text-red-600';
+    if (order.isExpired) return 'text-red-600';
+    if (order.timeRemaining < 10) return 'text-yellow-600';
+    return 'text-green-600';
+  };
+
+  const formatTimeRemaining = () => {
+    if (order.isExpired) return 'Expired';
+    if (order.timeRemaining < 60) return `${order.timeRemaining}m`;
+    const hours = Math.floor(order.timeRemaining / 60);
+    const mins = order.timeRemaining % 60;
+    return `${hours}h ${mins}m`;
   };
 
   return (
@@ -166,8 +85,8 @@ const CartRow: React.FC<CartRowProps> = ({ cart, onSendReminder, onApplyDiscount
       <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
         <td className="px-6 py-4">
           <div>
-            <p className="text-sm font-medium text-gray-900">{cart.customer}</p>
-            <p className="text-xs text-gray-500">{cart.phone}</p>
+            <p className="text-sm font-medium text-gray-900">{order.orderNumber}</p>
+            <p className="text-xs text-gray-500">{order.customerPhone}</p>
           </div>
         </td>
         <td className="px-6 py-4">
@@ -175,71 +94,73 @@ const CartRow: React.FC<CartRowProps> = ({ cart, onSendReminder, onApplyDiscount
             onClick={() => setExpanded(!expanded)}
             className="text-sm text-blue-600 hover:text-blue-800 font-medium"
           >
-            {cart.items.length} item{cart.items.length > 1 ? 's' : ''}
+            {order.items.length} item{order.items.length > 1 ? 's' : ''}
           </button>
         </td>
         <td className="px-6 py-4 text-sm font-semibold text-gray-900">
-          ₦{cart.cartValue.toLocaleString()}
+          ₦{order.totalAmount.toLocaleString()}
         </td>
         <td className="px-6 py-4">
           <div className="flex items-center gap-2">
             <Clock className={`w-4 h-4 ${getUrgencyColor()}`} />
             <span className={`text-sm font-medium ${getUrgencyColor()}`}>
-              {cart.timeAbandoned}
+              {formatTimeRemaining()}
             </span>
           </div>
         </td>
         <td className="px-6 py-4">
-          <StatusBadge 
-            reminderSent={cart.reminderSent} 
-            discountApplied={cart.discountApplied} 
-          />
+          <StatusBadge isExpired={order.isExpired} timeRemaining={order.timeRemaining} />
         </td>
         <td className="px-6 py-4">
           <div className="flex items-center gap-2">
             <button
-              onClick={() => onSendReminder(cart.id)}
-              disabled={cart.reminderSent}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                cart.reminderSent
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-blue-600 text-white hover:bg-blue-700'
-              }`}
-              title={cart.reminderSent ? 'Reminder already sent' : 'Send reminder'}
+              onClick={() => onResendLink(order.id)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 text-white rounded-lg text-xs font-medium hover:bg-blue-700 transition-colors"
+              title="Resend payment link"
             >
               <Bell className="w-3 h-3" />
-              Remind
+              Resend
             </button>
+            {!order.isExpired && (
+              <button
+                onClick={() => onExtendTimeout(order.id)}
+                className="flex items-center gap-1 px-3 py-1.5 bg-green-600 text-white rounded-lg text-xs font-medium hover:bg-green-700 transition-colors"
+                title="Extend timeout"
+              >
+                <Clock className="w-3 h-3" />
+                Extend
+              </button>
+            )}
             <button
-              onClick={() => onApplyDiscount(cart.id)}
-              disabled={cart.discountApplied}
-              className={`flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                cart.discountApplied
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-purple-600 text-white hover:bg-purple-700'
-              }`}
-              title={cart.discountApplied ? 'Discount already applied' : 'Apply discount'}
+              onClick={() => onCancelOrder(order.id)}
+              className="flex items-center gap-1 px-3 py-1.5 bg-red-600 text-white rounded-lg text-xs font-medium hover:bg-red-700 transition-colors"
+              title="Cancel order"
             >
-              <Tag className="w-3 h-3" />
-              Discount
+              <XCircle className="w-3 h-3" />
+              Cancel
             </button>
           </div>
         </td>
       </tr>
-      
+
       {/* Expanded Row - Items Detail */}
       {expanded && (
         <tr className="bg-blue-50">
           <td colSpan={6} className="px-6 py-4">
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-gray-700 mb-2">Cart Items:</p>
-              {cart.items.map((item, index) => (
-                <div key={index} className="flex items-center justify-between text-sm bg-white rounded px-3 py-2 border border-blue-200">
+              <p className="text-xs font-semibold text-gray-700 mb-2">Order Items:</p>
+              {order.items.map((item) => (
+                <div
+                  key={item.id}
+                  className="flex items-center justify-between text-sm bg-white rounded px-3 py-2 border border-blue-200"
+                >
                   <div className="flex items-center gap-2">
-                    <span className="font-medium text-gray-900">{item.name}</span>
+                    <span className="font-medium text-gray-900">{item.product.name}</span>
                     <span className="text-gray-500">× {item.quantity}</span>
                   </div>
-                  <span className="font-semibold text-gray-900">₦{(item.price * item.quantity).toLocaleString()}</span>
+                  <span className="font-semibold text-gray-900">
+                    ₦{(item.price * item.quantity).toLocaleString()}
+                  </span>
                 </div>
               ))}
             </div>
@@ -250,52 +171,110 @@ const CartRow: React.FC<CartRowProps> = ({ cart, onSendReminder, onApplyDiscount
   );
 };
 
-// Main Abandoned Carts Page Component
-const AbandonedCartsPage: React.FC = () => {
+const AbandonedOrdersPage: React.FC = () => {
+  const [orders, setOrders] = useState<AbandonedOrder[]>([]);
+  const [stats, setStats] = useState({
+    totalOrders: 0,
+    expiredOrders: 0,
+    activeOrders: 0,
+    totalValue: 0,
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('All');
   const [showFilters, setShowFilters] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  const handleSendReminder = (cartId: number) => {
-    const cart = mockAbandonedCarts.find(c => c.id === cartId);
-    console.log('Sending reminder for cart:', cartId);
-    if (cart) alert(`Reminder sent to ${cart.customer} via WhatsApp`);
+  const fetchData = async () => {
+    setIsLoading(true);
+    try {
+      const [ordersResponse, statsResponse] = await Promise.all([
+        abandonedOrderService.getAbandonedOrders(),
+        abandonedOrderService.getStats(),
+      ]);
+
+      setOrders(ordersResponse.data);
+      setStats(statsResponse.data);
+    } catch (error) {
+      console.error('Failed to fetch abandoned orders:', error);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleApplyDiscount = (cartId: number) => {
-    const cart = mockAbandonedCarts.find(c => c.id === cartId);
-    console.log('Applying discount for cart:', cartId);
-    if (cart) alert(`10% discount code sent to ${cart.customer}`);
+  useEffect(() => {
+    fetchData();
+
+    // Refresh every 30 seconds to update time remaining
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const handleResendLink = async (orderId: string) => {
+    try {
+      await abandonedOrderService.resendPaymentLink(orderId);
+      alert('Payment link resent successfully!');
+      fetchData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to resend payment link');
+    }
   };
 
-  const filteredCarts = mockAbandonedCarts.filter(cart => {
-    const matchesSearch = cart.customer.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         cart.phone.includes(searchTerm) ||
-                         cart.items.some(item => item.name.toLowerCase().includes(searchTerm.toLowerCase()));
-    
+  const handleCancelOrder = async (orderId: string) => {
+    if (!confirm('Are you sure you want to cancel this order?')) return;
+
+    try {
+      await abandonedOrderService.cancelOrder(orderId);
+      alert('Order cancelled successfully');
+      fetchData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to cancel order');
+    }
+  };
+
+  const handleExtendTimeout = async (orderId: string) => {
+    try {
+      await abandonedOrderService.extendTimeout(orderId, 30);
+      alert('Timeout extended by 30 minutes');
+      fetchData();
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Failed to extend timeout');
+    }
+  };
+
+  const filteredOrders = orders.filter((order) => {
+    const matchesSearch =
+      order.orderNumber.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      order.customerPhone.includes(searchTerm) ||
+      order.items.some((item) => item.product.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
     let matchesStatus = true;
-    if (statusFilter === 'Reminder Sent') matchesStatus = cart.reminderSent;
-    if (statusFilter === 'No Action') matchesStatus = !cart.reminderSent && !cart.discountApplied;
-    if (statusFilter === 'Discount Applied') matchesStatus = cart.discountApplied;
-    
+    if (statusFilter === 'Active') matchesStatus = !order.isExpired;
+    if (statusFilter === 'Expired') matchesStatus = order.isExpired;
+    if (statusFilter === 'Expiring Soon') matchesStatus = !order.isExpired && order.timeRemaining < 10;
+
     return matchesSearch && matchesStatus;
   });
-
-  const totalCartValue = mockAbandonedCarts.reduce((sum, cart) => sum + cart.cartValue, 0);
-  const remindersSent = mockAbandonedCarts.filter(c => c.reminderSent).length;
-  const noAction = mockAbandonedCarts.filter(c => !c.reminderSent && !c.discountApplied).length;
 
   return (
     <div className="min-h-screen p-8">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
-          <div className="flex items-center gap-3 mb-2">
-            <ShoppingCart className="w-8 h-8 text-orange-600" />
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Abandoned Carts</h1>
-              <p className="text-gray-600">Recover lost sales and reduce drop-offs</p>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <ShoppingCart className="w-8 h-8 text-orange-600" />
+              <div>
+                <h1 className="text-3xl font-bold text-gray-900">Abandoned Orders</h1>
+                <p className="text-gray-600">Recover unpaid orders and reduce drop-offs</p>
+              </div>
             </div>
+            <button
+              onClick={fetchData}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Refresh
+            </button>
           </div>
         </div>
 
@@ -304,30 +283,30 @@ const AbandonedCartsPage: React.FC = () => {
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center gap-3 mb-2">
               <ShoppingCart className="w-5 h-5 text-gray-600" />
-              <p className="text-sm text-gray-600">Total Carts</p>
+              <p className="text-sm text-gray-600">Total Orders</p>
             </div>
-            <p className="text-2xl font-bold text-gray-900">{mockAbandonedCarts.length}</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.totalOrders}</p>
           </div>
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center gap-3 mb-2">
               <TrendingDown className="w-5 h-5 text-red-600" />
-              <p className="text-sm text-gray-600">Lost Revenue</p>
+              <p className="text-sm text-gray-600">Potential Revenue</p>
             </div>
-            <p className="text-2xl font-bold text-red-600">₦{totalCartValue.toLocaleString()}</p>
+            <p className="text-2xl font-bold text-red-600">₦{stats.totalValue.toLocaleString()}</p>
           </div>
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center gap-3 mb-2">
-              <CheckCircle className="w-5 h-5 text-blue-600" />
-              <p className="text-sm text-gray-600">Reminders Sent</p>
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <p className="text-sm text-gray-600">Active Orders</p>
             </div>
-            <p className="text-2xl font-bold text-blue-600">{remindersSent}</p>
+            <p className="text-2xl font-bold text-green-600">{stats.activeOrders}</p>
           </div>
           <div className="bg-white rounded-lg p-6 border border-gray-200">
             <div className="flex items-center gap-3 mb-2">
               <AlertCircle className="w-5 h-5 text-yellow-600" />
-              <p className="text-sm text-gray-600">Needs Action</p>
+              <p className="text-sm text-gray-600">Expired</p>
             </div>
-            <p className="text-2xl font-bold text-yellow-600">{noAction}</p>
+            <p className="text-2xl font-bold text-yellow-600">{stats.expiredOrders}</p>
           </div>
         </div>
 
@@ -338,7 +317,7 @@ const AbandonedCartsPage: React.FC = () => {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
                 type="text"
-                placeholder="Search by customer, phone, or items..."
+                placeholder="Search by order number, phone, or items..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
@@ -350,7 +329,9 @@ const AbandonedCartsPage: React.FC = () => {
             >
               <Filter className="w-5 h-5 text-gray-600" />
               <span className="text-sm font-medium text-gray-700">Filters</span>
-              <ChevronDown className={`w-4 h-4 text-gray-600 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+              <ChevronDown
+                className={`w-4 h-4 text-gray-600 transition-transform ${showFilters ? 'rotate-180' : ''}`}
+              />
             </button>
           </div>
 
@@ -364,32 +345,32 @@ const AbandonedCartsPage: React.FC = () => {
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-orange-500"
                 >
                   <option value="All">All Statuses</option>
-                  <option value="No Action">No Action</option>
-                  <option value="Reminder Sent">Reminder Sent</option>
-                  <option value="Discount Applied">Discount Applied</option>
+                  <option value="Active">Active</option>
+                  <option value="Expiring Soon">Expiring Soon</option>
+                  <option value="Expired">Expired</option>
                 </select>
               </div>
             </div>
           )}
         </div>
 
-        {/* Abandoned Carts Table */}
+        {/* Orders Table */}
         <div className="bg-white rounded-lg border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Customer
+                    Order Details
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Items
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Cart Value
+                    Amount
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
-                    Time Abandoned
+                    Time Remaining
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-semibold text-gray-700 uppercase tracking-wider">
                     Status
@@ -400,19 +381,27 @@ const AbandonedCartsPage: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredCarts.length > 0 ? (
-                  filteredCarts.map(cart => (
-                    <CartRow
-                      key={cart.id}
-                      cart={cart}
-                      onSendReminder={handleSendReminder}
-                      onApplyDiscount={handleApplyDiscount}
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
+                      <RefreshCw className="w-8 h-8 text-gray-400 animate-spin mx-auto mb-3" />
+                      <p>Loading abandoned orders...</p>
+                    </td>
+                  </tr>
+                ) : filteredOrders.length > 0 ? (
+                  filteredOrders.map((order) => (
+                    <OrderRow
+                      key={order.id}
+                      order={order}
+                      onResendLink={handleResendLink}
+                      onCancelOrder={handleCancelOrder}
+                      onExtendTimeout={handleExtendTimeout}
                     />
                   ))
                 ) : (
                   <tr>
                     <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
-                      No abandoned carts found matching your criteria
+                      No abandoned orders found matching your criteria
                     </td>
                   </tr>
                 )}
@@ -423,19 +412,21 @@ const AbandonedCartsPage: React.FC = () => {
 
         {/* Results Summary */}
         <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
-          <span>Showing {filteredCarts.length} of {mockAbandonedCarts.length} abandoned carts</span>
+          <span>
+            Showing {filteredOrders.length} of {orders.length} abandoned orders
+          </span>
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-yellow-200 rounded-full border border-yellow-300"></div>
-              <span>No Action</span>
-            </div>
-            <div className="flex items-center gap-2">
               <div className="w-3 h-3 bg-blue-200 rounded-full border border-blue-300"></div>
-              <span>Reminder Sent</span>
+              <span>Active</span>
             </div>
             <div className="flex items-center gap-2">
-              <div className="w-3 h-3 bg-purple-200 rounded-full border border-purple-300"></div>
-              <span>Discount Applied</span>
+              <div className="w-3 h-3 bg-yellow-200 rounded-full border border-yellow-300"></div>
+              <span>Expiring Soon</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-3 h-3 bg-red-200 rounded-full border border-red-300"></div>
+              <span>Expired</span>
             </div>
           </div>
         </div>
@@ -444,4 +435,4 @@ const AbandonedCartsPage: React.FC = () => {
   );
 };
 
-export default AbandonedCartsPage;
+export default AbandonedOrdersPage;

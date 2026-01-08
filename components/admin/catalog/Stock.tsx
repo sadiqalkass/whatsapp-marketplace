@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { Search, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Wifi, WifiOff } from 'lucide-react';
 import { adminProductService } from '@/services/adminProduct.service';
+import { getSocket } from '@/lib/socket';
 
 type StockStatus = 'In Stock' | 'Low Stock' | 'Out of Stock';
 type SyncStatus = 'Synced' | 'Not Synced';
@@ -197,6 +198,28 @@ export default function StockSyncPage() {
 
   useEffect(() => {
     fetchProducts();
+    
+    // Listen for real-time stock updates
+    try {
+      const socket = getSocket();
+      
+      socket.on('stock-updated', (data) => {
+        console.log('Stock updated:', data.products);
+        
+        setStockItems((prev) =>
+          prev.map((item) => {
+            const updated = data.products.find((p: any) => p.id === item.id);
+            return updated ? { ...item, stockQuantity: updated.stockQuantity } : item;
+          })
+        );
+      });
+
+      return () => {
+        socket.off('stock-updated');
+      };
+    } catch (error) {
+      console.error('Socket error:', error);
+    }
   }, []);
   
   const filteredItems = stockItems.map((item: StockItem) => ({

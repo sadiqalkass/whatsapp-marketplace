@@ -23,12 +23,9 @@ const mockProducts: Product[] = [
 
 export default function MerchantStockPage() {
   const [products, setProducts] = useState<Product[]>(mockProducts);
-<<<<<<< HEAD
   const [isEdit, setIsEdit] = useState(true);
-=======
   const [modifiedProducts, setModifiedProducts] = useState<Set<string>>(new Set());
   const [isSaving, setIsSaving] = useState(false);
->>>>>>> 4a690de4b49266dd3967f469556430b7348c90fe
 
   const getStockStatus = (stock: number) => {
     if (stock === 0) return { label: 'Out of Stock', color: 'text-red-600 bg-red-50 dark:bg-red-900/20 dark:text-red-400' };

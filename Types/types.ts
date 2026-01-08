@@ -62,15 +62,26 @@ export interface SummaryCardProps {
 }
 
 export interface EscrowOrder {
+  id: string;
   orderId: string;
-  customer: string;
-  merchant: string;
-  orderAmount: string;
-  heldAmount: string;
-  deliveryStatus: string;
-  escrowStatus: string;
-  createdDate: string;
+  merchantId: string;
+  amount: number;
+  status: string;
+  heldAt: string;
+  releasedAt: string | null;
   daysInEscrow: number;
+  order: {
+    id: string;
+    orderNumber: string;
+    customerPhone: string;
+    customerName: string | null;
+    customerEmail: string | null;
+    totalAmount: number;
+    status: string;
+    paymentStatus: string;
+    createdAt: string;
+    items: any[];
+  };
 }
 
 export interface StatusBadgeProps {

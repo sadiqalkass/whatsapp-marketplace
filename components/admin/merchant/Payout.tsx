@@ -1,8 +1,9 @@
 // app/merchants/payouts/page.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Wallet, Clock, CheckCircle, XCircle, Send, AlertCircle } from 'lucide-react';
+import { payoutApi } from '@/services/payout.service';
 
 type PayoutStatus = 'Pending' | 'Paid' | 'Failed';
 
@@ -16,69 +17,6 @@ interface Payout {
   lastPayoutAmount: number;
   status: PayoutStatus;
 }
-
-const mockPayouts: Payout[] = [
-  {
-    id: 'PO001',
-    merchantId: 'M001',
-    merchantName: 'Fashion Hub Store',
-    availableBalance: 45000,
-    pendingBalance: 12000,
-    lastPayoutDate: '2024-12-15',
-    lastPayoutAmount: 38000,
-    status: 'Paid',
-  },
-  {
-    id: 'PO002',
-    merchantId: 'M002',
-    merchantName: 'TechGear Nigeria',
-    availableBalance: 120000,
-    pendingBalance: 25000,
-    lastPayoutDate: '2024-12-18',
-    lastPayoutAmount: 95000,
-    status: 'Pending',
-  },
-  {
-    id: 'PO003',
-    merchantId: 'M004',
-    merchantName: 'Home Essentials Plus',
-    availableBalance: 67000,
-    pendingBalance: 8000,
-    lastPayoutDate: '2024-12-16',
-    lastPayoutAmount: 54000,
-    status: 'Paid',
-  },
-  {
-    id: 'PO004',
-    merchantId: 'M005',
-    merchantName: 'Beauty & Care Shop',
-    availableBalance: 34500,
-    pendingBalance: 15000,
-    lastPayoutDate: '2024-12-10',
-    lastPayoutAmount: 28000,
-    status: 'Failed',
-  },
-  {
-    id: 'PO005',
-    merchantId: 'M006',
-    merchantName: 'Sports Arena Store',
-    availableBalance: 89000,
-    pendingBalance: 18000,
-    lastPayoutDate: '2024-12-14',
-    lastPayoutAmount: 72000,
-    status: 'Pending',
-  },
-  {
-    id: 'PO006',
-    merchantId: 'M007',
-    merchantName: 'Books & Stationery Co',
-    availableBalance: 23000,
-    pendingBalance: 5000,
-    lastPayoutDate: '2024-12-17',
-    lastPayoutAmount: 19000,
-    status: 'Paid',
-  },
-];
 
 const StatusBadge = ({ status }: { status: PayoutStatus }) => {
   const config = {
@@ -163,11 +101,41 @@ const EscrowSummary = ({ payouts }: { payouts: Payout[] }) => {
 };
 
 export default function PayoutsPage() {
-  const [payouts, setPayouts] = useState(mockPayouts);
+  const [payouts, setPayouts] = useState<Payout[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | PayoutStatus>('all');
   const [selectedPayouts, setSelectedPayouts] = useState<string[]>([]);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  const fetchPayouts = async () => {
+    try {
+      setLoading(true);
+      const response = await payoutApi.getMerchantPayouts();
+
+      //Transform API to match payout interface
+      const transformed = response.data.map((p: any) => ({
+        id: p.id,
+        merchantId: p.id,
+        merchantName: p.merchantName,
+        availableBalance: p.availableBalance,
+        pendingBalance: p.pendingBalance,
+        lastPayoutDate: p.lastPayoutDate ? new Date(p.lastPayoutDate).toISOString().split('T')[0] : '-',
+        lastPayoutAmount: p.lastPayoutAmount,
+        status: 'Pending' as PayoutStatus,
+      }));
+
+      setPayouts(transformed);
+    } catch (error) {
+      console.error('Failed to fetch payouts', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayouts();
+  }, []);
 
   const filteredPayouts = payouts.filter((payout) => {
     const matchesSearch = payout.merchantName
@@ -191,40 +159,24 @@ export default function PayoutsPage() {
     }
   };
 
-  const processSinglePayout = (id: string) => {
-    const today = new Date().toISOString().split('T')[0];
-    setPayouts((prev) =>
-      prev.map((p) =>
-        p.id === id
-          ? {
-              ...p,
-              status: 'Paid' as PayoutStatus,
-              lastPayoutDate: today,
-              lastPayoutAmount: p.availableBalance,
-              availableBalance: 0,
-            }
-          : p
-      )
-    );
+  const processSinglePayout = async (id: string) => {
+    try {
+      await payoutApi.processSinglePayout(id);
+      await fetchPayouts(); // Refresh data
+    } catch (error) {
+      console.error('Failed to process payout:', error);
+    }
   };
 
-  const processBulkPayouts = () => {
-    const today = new Date().toISOString().split('T')[0];
-    setPayouts((prev) =>
-      prev.map((p) =>
-        selectedPayouts.includes(p.id)
-          ? {
-              ...p,
-              status: 'Paid' as PayoutStatus,
-              lastPayoutDate: today,
-              lastPayoutAmount: p.availableBalance,
-              availableBalance: 0,
-            }
-          : p
-      )
-    );
-    setSelectedPayouts([]);
-    setShowConfirmModal(false);
+  const processBulkPayouts = async () => {
+    try {
+      await payoutApi.processBulkPayouts(selectedPayouts);
+      setSelectedPayouts([]);
+      setShowConfirmModal(false);
+      await fetchPayouts(); // Refresh data
+    } catch (error) {
+      console.error('Failed to process bulk payouts:', error);
+    }
   };
 
   const selectedTotal = payouts
@@ -241,200 +193,210 @@ export default function PayoutsPage() {
           </p>
         </div>
 
-      <EscrowSummary payouts={payouts} />
-
-      <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="text"
-                placeholder="Search by merchant name..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-
-            <select
-              value={statusFilter}
-              onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as 'all' | PayoutStatus)}
-              className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
-            >
-              <option value="all">All Status</option>
-              <option value="Pending">Pending</option>
-              <option value="Paid">Paid</option>
-              <option value="Failed">Failed</option>
-            </select>
-          </div>
-
-          {selectedPayouts.length > 0 && (
-            <div className="flex items-center gap-3 w-full lg:w-auto">
-              <div className="text-sm text-gray-600">
-                {selectedPayouts.length} selected • ₦{selectedTotal.toLocaleString()}
-              </div>
-              <button
-                onClick={() => setShowConfirmModal(true)}
-                className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
-              >
-                <Send className="w-4 h-4" />
-                Process Payouts
-              </button>
-            </div>
-          )}
+      {loading ? (
+        <div className='text-center py-8'>
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+          <p className="mt-2 text-gray-600">Loading payouts...</p>
         </div>
-      </div>
+      ) : (
+        <>
 
-      <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-gray-50 border-b border-gray-200">
-              <tr>
-                <th className="px-6 py-4 text-left">
+          <EscrowSummary payouts={payouts} />
+
+          <div className="bg-white rounded-lg border border-gray-200 p-4 mb-6">
+            <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+              <div className="flex flex-col sm:flex-row gap-3 flex-1 w-full">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-5 h-5" />
                   <input
-                    type="checkbox"
-                    checked={
-                      selectedPayouts.length === filteredPayouts.length &&
-                      filteredPayouts.length > 0
-                    }
-                    onChange={toggleSelectAll}
-                    className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+                    type="text"
+                    placeholder="Search by merchant name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Merchant
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Available Balance
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Pending Balance
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Last Payout
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              {filteredPayouts.map((payout) => (
-                <tr key={payout.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4">
-                    <input
-                      type="checkbox"
-                      checked={selectedPayouts.includes(payout.id)}
-                      onChange={() => toggleSelection(payout.id)}
-                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
-                    />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div>
-                      <div className="text-sm font-semibold text-gray-900">
-                        {payout.merchantName}
-                      </div>
-                      <div className="text-xs text-gray-500">{payout.merchantId}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-bold text-green-700">
-                      ₦{payout.availableBalance.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-semibold text-yellow-700">
-                      ₦{payout.pendingBalance.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-700">{payout.lastPayoutDate}</div>
-                    <div className="text-xs text-gray-500">
-                      ₦{payout.lastPayoutAmount.toLocaleString()}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <StatusBadge status={payout.status} />
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    {payout.availableBalance > 0 ? (
-                      <button
-                        onClick={() => processSinglePayout(payout.id)}
-                        className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
-                      >
-                        <Send className="w-3.5 h-3.5" />
-                        Pay Now
-                      </button>
-                    ) : (
-                      <span className="text-sm text-gray-400">No funds</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+                </div>
 
-        {filteredPayouts.length === 0 && (
-          <div className="text-center py-16">
-            <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-            <p className="text-gray-500 font-medium">No merchants found</p>
-            <p className="text-sm text-gray-400 mt-1">
-              Try adjusting your search or filters
-            </p>
-          </div>
-        )}
-      </div>
-
-      {showConfirmModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
-                <Send className="w-6 h-6 text-blue-600" />
+                <select
+                  value={statusFilter}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setStatusFilter(e.target.value as 'all' | PayoutStatus)}
+                  className="px-4 py-2.5 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+                >
+                  <option value="all">All Status</option>
+                  <option value="Pending">Pending</option>
+                  <option value="Paid">Paid</option>
+                  <option value="Failed">Failed</option>
+                </select>
               </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">
-                  Confirm Bulk Payout
-                </h3>
-                <p className="text-sm text-gray-600">
-                  {selectedPayouts.length} merchants selected
+
+              {selectedPayouts.length > 0 && (
+                <div className="flex items-center gap-3 w-full lg:w-auto">
+                  <div className="text-sm text-gray-600">
+                    {selectedPayouts.length} selected • ₦{selectedTotal.toLocaleString()}
+                  </div>
+                  <button
+                    onClick={() => setShowConfirmModal(true)}
+                    className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-sm"
+                  >
+                    <Send className="w-4 h-4" />
+                    Process Payouts
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+            <div className="overflow-x-auto">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left">
+                      <input
+                        type="checkbox"
+                        checked={
+                          selectedPayouts.length === filteredPayouts.length &&
+                          filteredPayouts.length > 0
+                        }
+                        onChange={toggleSelectAll}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+                      />
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Merchant
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Available Balance
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Pending Balance
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Last Payout
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                      Actions
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  {filteredPayouts.map((payout) => (
+                    <tr key={payout.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4">
+                        <input
+                          type="checkbox"
+                          checked={selectedPayouts.includes(payout.id)}
+                          onChange={() => toggleSelection(payout.id)}
+                          className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-2 focus:ring-blue-500"
+                        />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-semibold text-gray-900">
+                            {payout.merchantName}
+                          </div>
+                          <div className="text-xs text-gray-500">{payout.merchantId}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-bold text-green-700">
+                          ₦{payout.availableBalance.toLocaleString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm font-semibold text-yellow-700">
+                          ₦{payout.pendingBalance.toLocaleString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-gray-700">{payout.lastPayoutDate}</div>
+                        <div className="text-xs text-gray-500">
+                          ₦{payout.lastPayoutAmount.toLocaleString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={payout.status} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        {payout.availableBalance > 0 ? (
+                          <button
+                            onClick={() => processSinglePayout(payout.id)}
+                            className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors flex items-center gap-2"
+                          >
+                            <Send className="w-3.5 h-3.5" />
+                            Pay Now
+                          </button>
+                        ) : (
+                          <span className="text-sm text-gray-400">No funds</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {filteredPayouts.length === 0 && (
+              <div className="text-center py-16">
+                <AlertCircle className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-500 font-medium">No merchants found</p>
+                <p className="text-sm text-gray-400 mt-1">
+                  Try adjusting your search or filters
                 </p>
               </div>
-            </div>
-
-            <div className="bg-gray-50 rounded-lg p-4 mb-6">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm text-gray-600">Total Amount:</span>
-                <span className="text-2xl font-bold text-gray-900">
-                  ₦{selectedTotal.toLocaleString()}
-                </span>
-              </div>
-              <p className="text-xs text-gray-500">
-                This action will process payouts for all selected merchants
-              </p>
-            </div>
-
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowConfirmModal(false)}
-                className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={processBulkPayouts}
-                className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
-              >
-                Confirm Payout
-              </button>
-            </div>
+            )}
           </div>
-        </div>
+
+          {showConfirmModal && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+              <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-2xl">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center">
+                    <Send className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-gray-900">
+                      Confirm Bulk Payout
+                    </h3>
+                    <p className="text-sm text-gray-600">
+                      {selectedPayouts.length} merchants selected
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4 mb-6">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">Total Amount:</span>
+                    <span className="text-2xl font-bold text-gray-900">
+                      ₦{selectedTotal.toLocaleString()}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    This action will process payouts for all selected merchants
+                  </p>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowConfirmModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={processBulkPayouts}
+                    className="flex-1 px-4 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    Confirm Payout
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
       </div>
     </div>

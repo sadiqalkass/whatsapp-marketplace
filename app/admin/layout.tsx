@@ -1,13 +1,20 @@
-// app/admin/layout.tsx
+'use client';
+
+import { useEffect } from 'react';
 import ProtectedRoute from '@/components/ProtectedRoutes';
 import { Sidebar } from '@/components/admin/sidebar/Sidebar';
-import HelpCenterWrapper from '@/components/shared/HelpCenterWrapper';
+import { initializeSocket, disconnectSocket } from '@/lib/socket';
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  useEffect(() => {
+    initializeSocket();
+    return () => disconnectSocket();
+  }, []);
+
   return (
     <ProtectedRoute allowedRoles={['ADMIN', 'MANAGER', 'SUPPORT']}>
       <div className="h-screen flex overflow-hidden">
@@ -17,9 +24,6 @@ export default function AdminLayout({
         <main className="flex-1 overflow-y-auto bg-gray-200 dark:bg-gray-900 pt-16 lg:pt-0">
           {children}
         </main>
-        
-        {/* Add Help Center and Tour Guide */}
-        <HelpCenterWrapper />
       </div>
     </ProtectedRoute>
   );
