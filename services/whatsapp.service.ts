@@ -1,6 +1,7 @@
 // services/whatsapp.service.ts
 import api from '../lib/api';
-import socketService, { 
+import { socketService } from '@/lib/socket';
+import { 
   NewMessageData as SocketNewMessageData,
   MessageStatusUpdateData as SocketMessageStatusUpdateData,
   ConversationUpdatedData as SocketConversationUpdatedData,

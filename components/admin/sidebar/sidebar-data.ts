@@ -85,7 +85,7 @@ export const sidebarData: SidebarSection[] = [
 
 export const sidebarSingleItems: SidebarSingleItem[] = [
   {
-    id: 'admin/profile',
+    id: 'profile',
     label: 'Profile',
     icon: User,
   },

@@ -1,4 +1,4 @@
-import AdminProfile from "@/components/admin/profile";
+import AdminProfile from '@/components/admin/profile';
 
 export default function AdminProfilePage() {
   return <AdminProfile />;

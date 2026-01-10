@@ -77,8 +77,8 @@ export default function ReportsPage() {
     if (!summaryData) return { sales: '₦0', orders: 0, trend: { value: '0%', isPositive: true } };
     
     return {
-      sales: `₦${summaryData.gmv.toLocaleString()}`,
-      orders: summaryData.ordersCount,
+      sales: `₦${(summaryData.gmv || 0).toLocaleString()}`,
+      orders: summaryData.ordersCount || 0,
       trend: { value: '0%', isPositive: true },
     };
   };

@@ -3,9 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
   Users, Plus, Search, Edit2, Trash2, Send, Tag, 
-  ShoppingCart, TrendingUp, Filter, X, ChevronRight,
-  Calendar, DollarSign, Package, Clock, Percent,
-  Hash, Award, AlertCircle, RefreshCw, Download, Upload
+  TrendingUp, Filter, X, ChevronRight,
+  AlertCircle, RefreshCw, Download, Upload
 } from 'lucide-react';
 import broadcastService from '../../../services/broadcast.service';
 import { Segment, CreateSegmentDTO, UpdateSegmentDTO } from '../../../Types/broadcast.types';

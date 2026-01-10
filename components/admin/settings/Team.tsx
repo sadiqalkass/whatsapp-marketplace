@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { UserPlus, Edit, UserX, Shield, Users, CheckCircle } from 'lucide-react';
 import { TeamMember, RolePermissions } from '@/Types/types';
 import { profileService } from '@/services/profile.service';
-import { div } from 'framer-motion/client';
 
 const StatusBadge = ({ 
   status, 
@@ -61,7 +60,7 @@ export default function TeamRolesPage() {
   const [inviteForm, setInviteForm] = useState({
     name: '',
     email: '',
-    role: 'Support' as TeamMember['role'],
+    role: 'SUPPORT' as TeamMember['role'],
   });
 
   const fetchTeamData = async () => {
@@ -348,9 +347,9 @@ export default function TeamRolesPage() {
                       onChange={(e) => setInviteForm({ ...inviteForm, role: e.target.value as TeamMember['role'] })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="Support">Support</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Admin">Admin</option>
+                      <option value="SUPPORT">Support</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="ADMIN">Admin</option>
                     </select>
                   </div>
                 </div>
@@ -402,9 +401,9 @@ export default function TeamRolesPage() {
                       onChange={(e) => setSelectedMember({ ...selectedMember, role: e.target.value as TeamMember['role'] })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
-                      <option value="Support">Support</option>
-                      <option value="Manager">Manager</option>
-                      <option value="Admin">Admin</option>
+                      <option value="SUPPORT">Support</option>
+                      <option value="MANAGER">Manager</option>
+                      <option value="ADMIN">Admin</option>
                     </select>
                   </div>
                 </div>
