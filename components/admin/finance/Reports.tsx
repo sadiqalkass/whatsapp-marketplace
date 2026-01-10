@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { TrendingUp, DollarSign, Calendar, Download, FileText, Filter } from 'lucide-react';
 import { SummaryCardProps } from '@/Types/types';
 import { reportApi } from '@/services/report.service';
+import toast from 'react-hot-toast';
 
 const SummaryCard = ({ title, value, icon: Icon, trend, className = '' }: SummaryCardProps) => {
   return (
@@ -69,7 +70,7 @@ export default function ReportsPage() {
     if (format === 'csv') {
       await reportApi.exportCSV(dateRange as 'daily' | 'weekly' | 'monthly');
     } else {
-      alert('PDF export coming soon');
+      toast.error('PDF export coming soon');
     }
   };
 

@@ -8,6 +8,7 @@ import ProfileHeader from '@/components/merchant/profile/profileHeader';
 import BusinessInfoSection from '@/components/merchant/profile/BusinessInfoSection';
 import ContactDetailsSection from '@/components/merchant/profile/ContactDetailsSection';
 import VerificationSection from '@/components/merchant/profile/VerificationSection';
+import toast from 'react-hot-toast';
 
 type VerificationStatus = 'PENDING' | 'VERIFIED' | 'REJECTED';
 
@@ -65,11 +66,11 @@ export default function MerchantProfilePage() {
         phone: realProfile?.phone || ''
       });
       fetchProfile();
-      alert('Profile updated successfully!');
+      toast.error('Profile updated successfully!');
     } catch (error) {
       console.error('Error updating profile:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update profile';
-      alert(errorMessage);
+      atoast.error(errorMessage);
       throw error;
     }
   };
@@ -77,7 +78,7 @@ export default function MerchantProfilePage() {
   const handlePhoneUpdate = async (phone: string) => {
     try {
       if (!realProfile?.businessName || !realProfile?.category || !realProfile?.location) {
-        alert('Please fill in business information first');
+        toast.error('Please fill in business information first');
         return;
       }
 
@@ -88,11 +89,11 @@ export default function MerchantProfilePage() {
         phone
       });
       fetchProfile();
-      alert('Phone number updated successfully!');
+      toast.error('Phone number updated successfully!');
     } catch (error) {
       console.error('Error updating phone:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to update phone';
-      alert(errorMessage);
+      toast.error(errorMessage);
       throw error;
     }
   };
@@ -104,7 +105,7 @@ export default function MerchantProfilePage() {
 
  const handleVerificationSubmit = async (formData: FormData) => {
     if (!realProfile?.businessName || !realProfile?.category || !realProfile?.location) {
-      alert('Please complete your business information first');
+      toast.error('Please complete your business information first');
       return;
     }
 
@@ -119,10 +120,10 @@ export default function MerchantProfilePage() {
 
     try {
       await profileService.submitMerchantVerification(formData);
-      alert('Verification submitted successfully');
+      toast.error('Verification submitted successfully');
       fetchProfile();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Error submitting verification');
+      toast.error(error.response?.data?.message || 'Error submitting verification');
       console.error(error);
       throw error;
     }
@@ -153,7 +154,7 @@ export default function MerchantProfilePage() {
         newPassword: passwordForm.newPassword
       });
 
-      alert('Password changed successfully!');
+      toast.error('Password changed successfully!');
       setShowPasswordModal(false);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (error: any) {

@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { ShoppingCart, Search, Bell, Clock, TrendingDown, AlertCircle, CheckCircle, Filter, ChevronDown, XCircle, RefreshCw } from 'lucide-react';
 import { abandonedOrderService } from '@/services/abadonedOrder.service';
+import toast from 'react-hot-toast';
 
 type OrderItem = {
   id: string;
@@ -212,10 +213,10 @@ const AbandonedOrdersPage: React.FC = () => {
   const handleResendLink = async (orderId: string) => {
     try {
       await abandonedOrderService.resendPaymentLink(orderId);
-      alert('Payment link resent successfully!');
+      toast.error('Payment link resent successfully!');
       fetchData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to resend payment link');
+      toast.error(error.response?.data?.message || 'Failed to resend payment link');
     }
   };
 
@@ -224,20 +225,20 @@ const AbandonedOrdersPage: React.FC = () => {
 
     try {
       await abandonedOrderService.cancelOrder(orderId);
-      alert('Order cancelled successfully');
+      toast.error('Order cancelled successfully');
       fetchData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to cancel order');
+      toast.error(error.response?.data?.message || 'Failed to cancel order');
     }
   };
 
   const handleExtendTimeout = async (orderId: string) => {
     try {
       await abandonedOrderService.extendTimeout(orderId, 30);
-      alert('Timeout extended by 30 minutes');
+      toast.error('Timeout extended by 30 minutes');
       fetchData();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to extend timeout');
+      toast.error(error.response?.data?.message || 'Failed to extend timeout');
     }
   };
 

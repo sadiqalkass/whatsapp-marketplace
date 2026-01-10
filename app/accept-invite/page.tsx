@@ -3,6 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import { profileService } from '@/services/profile.service';
+import toast from 'react-hot-toast';
 
 export default function AcceptInvitePage() {
   const searchParams = useSearchParams();
@@ -25,7 +26,7 @@ export default function AcceptInvitePage() {
       const res = await profileService.verifyInviteToken(token!);
       setUserData(res.data);
     } catch (error) {
-      alert('Invalid or expired invite link');
+      toast.error('Invalid or expired invite link');
     } finally {
       setLoading(false);
     }
@@ -35,21 +36,21 @@ export default function AcceptInvitePage() {
     e.preventDefault();
     
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      toast.error('Passwords do not match');
       return;
     }
 
     if (password.length < 6) {
-      alert('Password must be at least 6 characters');
+      toast.error('Password must be at least 6 characters');
       return;
     }
 
     try {
       await profileService.acceptInvite({ token: token!, password });
-      alert('Account activated! Please login.');
+      toast.error('Account activated! Please login.');
       router.push('/');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to activate account');
+      toast.error(error.response?.data?.message || 'Failed to activate account');
     }
   };
 

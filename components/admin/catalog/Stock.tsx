@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { Search, RefreshCw, AlertTriangle, CheckCircle, XCircle, Clock, Wifi, WifiOff } from 'lucide-react';
 import { adminProductService } from '@/services/adminProduct.service';
 import { getSocket } from '@/lib/socket';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 type StockStatus = 'In Stock' | 'Low Stock' | 'Out of Stock';
 type SyncStatus = 'Synced' | 'Not Synced';
@@ -184,12 +186,20 @@ export default function StockSyncPage() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
 
+  const router = useRouter();
+
   const fetchProducts = async () => {
     setIsLoading(true);
     try {
       const response = await adminProductService.getProductsForSync();
       setStockItems(response.data);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Access denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load products');
+      }
       console.error('Failed to fetch products:', error);
     } finally {
       setIsLoading(false);

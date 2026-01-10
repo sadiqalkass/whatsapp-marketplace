@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Search, MoreVertical, Eye, CheckCircle, EyeOff, Image, Settings } from 'lucide-react';
 import { adminProductService } from '@/services/adminProduct.service';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 type ProductStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 
@@ -168,6 +170,8 @@ export default function ProductsPage() {
   const [merchantFilter, setMerchantFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState<'all' | ProductStatus>('all');
 
+  const router = useRouter();
+
   useEffect(() => {
     fetchProducts();
   }, [statusFilter]);
@@ -199,7 +203,13 @@ export default function ProductsPage() {
       }
 
       setTotal(response.total);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Access denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load products');
+      }
       console.error('Failed to fetch products:', error);
     } finally {
       setLoading(false);

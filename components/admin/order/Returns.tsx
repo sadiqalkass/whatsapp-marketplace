@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { RotateCcw, Search, Filter, Check, XCircle, DollarSign, ChevronDown, AlertCircle, Clock, CheckCircle, Ban } from 'lucide-react';
 import { refundService } from '@/services/refund.service';
+import toast from 'react-hot-toast';
 
 type StatusBadgeProps = { status: string };
 const StatusBadge: React.FC<StatusBadgeProps> = ({ status }) => {
@@ -137,10 +138,10 @@ const ReturnsPage: React.FC = () => {
   const handleApprove = async (orderId: string) => {
     try {
       await refundService.approveRefund(orderId);
-      alert(`Return approved for ${orderId}`);
+      toast.error(`Return approved for ${orderId}`);
       fetchRefunds();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to approve refund');
+      toast.error(error.response?.data?.message || 'Failed to approve refund');
     }
   };
 
@@ -150,10 +151,10 @@ const ReturnsPage: React.FC = () => {
 
     try {
       await refundService.rejectRefund(orderId, reason);
-      alert(`Return rejected for ${orderId}`);
+      toast.error(`Return rejected for ${orderId}`);
       fetchRefunds();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to reject refund');
+      toast.error(error.response?.data?.message || 'Failed to reject refund');
     }
   };
 
@@ -162,10 +163,10 @@ const ReturnsPage: React.FC = () => {
 
     try {
       await refundService.processRefund(orderId);
-      alert(`Refund initiated for ${orderId}`);
+      toast.errort(`Refund initiated for ${orderId}`);
       fetchRefunds();
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to process refund');
+      toast.error(error.response?.data?.message || 'Failed to process refund');
     }
   };
 

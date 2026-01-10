@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Search, TrendingUp, AlertCircle } from 'lucide-react';
 import { adminProductService } from '@/services/adminProduct.service';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 type PriceStatus = 'Active' | 'Inactive';
 
@@ -113,6 +115,8 @@ export default function PricingManagerPage() {
   const [bulkMarkup, setBulkMarkup] = useState('');
   const [showBulkModal, setShowBulkModal] = useState(false);
 
+  const router = useRouter();
+
   useEffect(() => {
     fetchProducts();
   }, []);
@@ -122,7 +126,13 @@ export default function PricingManagerPage() {
       setLoading(true);
       const response = await adminProductService.getAllProducts('APPROVED', 100, 0);
       setPrices(response.data);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Access denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load products');
+      }
       console.error('Failed to fetch products:', error);
     } finally {
       setLoading(false);

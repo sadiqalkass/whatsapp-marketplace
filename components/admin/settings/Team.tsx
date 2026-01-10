@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { UserPlus, Edit, UserX, Shield, Users, CheckCircle } from 'lucide-react';
 import { TeamMember, RolePermissions } from '@/Types/types';
 import { profileService } from '@/services/profile.service';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const StatusBadge = ({ 
   status, 
@@ -63,6 +65,8 @@ export default function TeamRolesPage() {
     role: 'SUPPORT' as TeamMember['role'],
   });
 
+  const router = useRouter();
+
   const fetchTeamData = async () => {
     try {
       setLoading(true);
@@ -73,9 +77,14 @@ export default function TeamRolesPage() {
       
       setTeamMembers(membersRes.data);
       setRolePermissions(permissionsRes.data);
-    } catch (error) {
-      console.error('Error fetching team data:', error);
-      alert('Failed to load team data');
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Access denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load team');
+      }
+      console.error('Failed to fetch team:', error);
     } finally {
       setLoading(false);
     }
@@ -87,7 +96,7 @@ export default function TeamRolesPage() {
 
   const handleInviteMember = async () => {
     if (!inviteForm.name || !inviteForm.email) {
-      alert('Please fill in all fields');
+      toast.error('Please fill in all fields');
       return;
     }
 
@@ -96,9 +105,9 @@ export default function TeamRolesPage() {
       await fetchTeamData(); // Refresh the list
       setShowInviteModal(false);
       setInviteForm({ name: '', email: '', role: 'Support' });
-      alert('Team member invited successfully! They will receive an email.');
+      toast.error('Team member invited successfully! They will receive an email.');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to invite team member');
+      toast.error(error.response?.data?.message || 'Failed to invite team member');
     }
   };
 
@@ -115,9 +124,9 @@ export default function TeamRolesPage() {
       await fetchTeamData(); // Refresh the list
       setShowEditModal(false);
       setSelectedMember(null);
-      alert('Role updated successfully!');
+      toast.error('Role updated successfully!');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to update role');
+      toast.error(error.response?.data?.message || 'Failed to update role');
     }
   };
 
@@ -125,9 +134,9 @@ export default function TeamRolesPage() {
     try {
       await profileService.toggleMemberStatus(memberId);
       await fetchTeamData(); // Refresh the list
-      alert('Status updated successfully!');
+      toast.error('Status updated successfully!');
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Failed to update status');
+      toast.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 

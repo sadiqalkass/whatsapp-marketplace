@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Plus, Edit2, DollarSign, Package, X, Upload, Trash2, AlertTriangle } from 'lucide-react';
 import Image from 'next/image';
 import { profileService } from '@/services/profile.service';
+import toast from 'react-hot-toast';
 
 type Product = {
   id: string;
@@ -102,7 +103,7 @@ const MerchantProducts = () => {
     // Check if merchant is verified
     if (!isVerified) {
       // Redirect to profile page for verification
-      alert('Please complete your verification first');
+      toast.error('Please complete your verification first');
       window.location.href = '/merchant/profile';
       // Or use Next.js router: router.push('/merchant/profile');
       return;
@@ -149,7 +150,7 @@ const MerchantProducts = () => {
     if (e.target.files) {
       const filesArray = Array.from(e.target.files);
       if (filesArray.length + productImages.length > 5) {
-        alert('Maximum 5 images allowed');
+        toast.error('Maximum 5 images allowed');
         return;
       }
       setProductImages([...productImages, ...filesArray]);
@@ -164,12 +165,12 @@ const MerchantProducts = () => {
     // Validation
     if (!formData.name || !formData.category || !formData.price || !formData.description || 
       !formData.stockQuantity || !formData.unit || !formData.minOrderQty) {
-      alert('Please fill all required fields');
+      toast.error('Please fill all required fields');
       return;
     }
 
     if (productImages.length === 0) {
-      alert('Please upload at least one product image');
+      toast.error('Please upload at least one product image');
       return;
     }
 
@@ -194,7 +195,7 @@ const MerchantProducts = () => {
     
     try {
       await profileService.createProduct(submitData);
-      alert('Product submitted for review successfully!');
+      toast.error('Product submitted for review successfully!');
       handleCloseForm();
 
       // Refresh products list
@@ -202,7 +203,7 @@ const MerchantProducts = () => {
       setProducts(productsResponse.data || []);
     } catch (error) {
       console.error('Error submitting product:', error);
-      alert('Error submitting product. Please try again.');
+      toast.error('Error submitting product. Please try again.');
     }
   };
 
