@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { CheckCircle, Clock, XCircle, FileText, MapPin, Package, ChevronDown, ChevronUp, ExternalLink, FileImage } from 'lucide-react';
 import { adminMerchantService } from '@/services/adminMerchant.service';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 type StepStatus = 'pending' | 'approved' | 'rejected';
 
@@ -322,6 +324,8 @@ export default function OnboardingPage() {
 
   console.log('component render - loading:', loading, 'merchants:', merchants.length)
 
+  const router = useRouter();
+
   useEffect(() => {
     console.log('useEffect running')
     fetchPendingMerchants();
@@ -407,8 +411,14 @@ export default function OnboardingPage() {
       console.log('Transformed:', transformedMerchants);
       console.log('Count:', transformedMerchants.length);
       console.log('Loading State:', loading);
-    } catch (err: any) {
-      setError(err.response?.data?.message || 'Failed to load merchants');
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Acess denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load pending Merchants');
+      } 
+      console.error('Failed to fetch pending merchants:', error);
     } finally {
       setLoading(false);
       console.log('Loading set to false');

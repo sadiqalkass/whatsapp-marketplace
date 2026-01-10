@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { Search, MoreVertical, Eye, Ban, CheckCircle, EyeOff } from 'lucide-react';
 import { adminMerchantService } from '@/services/adminMerchant.service';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 type MerchantStatus = 'Active' | 'Suspended';
 
@@ -132,6 +134,8 @@ export default function AllMerchantsPage() {
     };
   };
 
+  const router = useRouter();
+
   const fetchMerchants = async (isLoadMore = false) => {
     try {
       if (isLoadMore) {
@@ -159,7 +163,13 @@ export default function AllMerchantsPage() {
       }
 
       setTotal(response.total);
-    } catch (error) {
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Acess denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load Merchants');
+      } 
       console.error('Failed to fetch merchants:', error);
     } finally {
       setLoading(false);

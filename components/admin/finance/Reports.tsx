@@ -5,6 +5,7 @@ import { TrendingUp, DollarSign, Calendar, Download, FileText, Filter } from 'lu
 import { SummaryCardProps } from '@/Types/types';
 import { reportApi } from '@/services/report.service';
 import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const SummaryCard = ({ title, value, icon: Icon, trend, className = '' }: SummaryCardProps) => {
   return (
@@ -37,6 +38,7 @@ export default function ReportsPage() {
   const [dateFilter, setDateFilter] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
 
+  const router = useRouter();
   const fetchReports = async () => {
     try {
       setLoading(true);
@@ -55,8 +57,14 @@ export default function ReportsPage() {
       }
       
       setMerchantData(filtered);
-    } catch (error) {
-      console.error('Failed to fetch reports:', error);
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Acess denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load Reports');
+      } 
+      console.error('Failed to fetch report:', error);
     } finally {
       setLoading(false);
     }

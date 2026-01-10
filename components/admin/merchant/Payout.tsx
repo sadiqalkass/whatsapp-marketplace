@@ -4,6 +4,8 @@
 import { useState, useEffect } from 'react';
 import { Search, Wallet, Clock, CheckCircle, XCircle, Send, AlertCircle } from 'lucide-react';
 import { payoutApi } from '@/services/payout.service';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 type PayoutStatus = 'Pending' | 'Paid' | 'Failed';
 
@@ -108,6 +110,8 @@ export default function PayoutsPage() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const router = useRouter();
+
   const fetchPayouts = async () => {
     try {
       setLoading(true);
@@ -126,8 +130,14 @@ export default function PayoutsPage() {
       }));
 
       setPayouts(transformed);
-    } catch (error) {
-      console.error('Failed to fetch payouts', error);
+    } catch (error: any) {
+        if (error.response?.status === 403) {
+          toast.error('Acess denied');
+          router.push('/admin/dashboard');
+        } else {
+          toast.error('Failed to load Payout');
+        } 
+        console.error('Failed to fetch payout:', error);
     } finally {
       setLoading(false);
     }

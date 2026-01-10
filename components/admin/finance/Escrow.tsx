@@ -4,6 +4,8 @@ import React, { useEffect, useState } from 'react';
 import { DollarSign, Package, Clock, Eye, AlertCircle } from 'lucide-react';
 import { SummaryCardProps, EscrowOrder, StatusBadgeProps } from '@/Types/types';
 import { escrowApi } from '@/services/escrow.service';
+import toast from 'react-hot-toast';
+import { useRouter } from 'next/navigation';
 
 const SummaryCard = ({ title, value, icon: Icon, trend, className = '' }: SummaryCardProps) => {
   return (
@@ -48,6 +50,8 @@ export default function EscrowPage() {
   const [stats, setStats] = useState({ totalInEscrow: 0, ordersInEscrow: 0, oldestEscrow: 0 });
   const [loading, setLoading] = useState(true);
 
+  const router = useRouter()
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -57,8 +61,14 @@ export default function EscrowPage() {
       ]);
       setEscrowData(escrowRes.data);
       setStats(statsRes.data);
-    } catch (error) {
-      console.error('Failed to fetch escrow data:', error);
+    } catch (error: any) {
+      if (error.response?.status === 403) {
+        toast.error('Acess denied');
+        router.push('/admin/dashboard');
+      } else {
+        toast.error('Failed to load Escrow');
+      } 
+      console.error('Failed to fetch escrow:', error);
     } finally {
       setLoading(false);
     }
