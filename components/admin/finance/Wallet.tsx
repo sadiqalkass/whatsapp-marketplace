@@ -16,18 +16,15 @@ import {
   Edit,
   CheckCircle,
   XCircle,
-  AlertCircle,
   ArrowUpRight,
   ArrowDownRight,
   Users,
   CreditCard,
   BarChart3,
   Shield,
-  PlusCircle,
   MoreVertical,
   Loader2,
   AlertTriangle,
-  Check,
   X,
   Clock
 } from 'lucide-react';
@@ -1007,10 +1004,6 @@ function WithdrawalManager() {
     </div>
   );
 }
-
-// ============================================
-// TRANSACTION HISTORY MODAL
-// ============================================
 
 function TransactionHistoryModal({ walletId, onClose }: { walletId: string; onClose: () => void }) {
   const [transactions, setTransactions] = useState<TransactionData[]>([]);

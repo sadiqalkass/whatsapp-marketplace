@@ -55,4 +55,18 @@ export const authService = {
   isAuthenticated: () => {
     return !!localStorage.getItem('token');
   },
+
+  riderRegister: async (data: {
+    email: string;
+    password: string;
+    firstName: string;
+    lastName: string;
+    phone: string;
+    vehicleType: string;
+    vehicleNumber?: string;
+    licensePlate?: string;
+  }) => {
+    const response = await api.post<AuthResponse>('/auth/rider/register', data);
+    return response.data;
+  },
 };
