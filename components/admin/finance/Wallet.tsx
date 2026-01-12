@@ -6,7 +6,6 @@ import {
   TrendingUp, 
   TrendingDown, 
   Search, 
-  Filter, 
   Download, 
   Lock, 
   Unlock,
@@ -14,8 +13,6 @@ import {
   RefreshCw,
   Eye,
   Edit,
-  CheckCircle,
-  XCircle,
   ArrowUpRight,
   ArrowDownRight,
   Users,
@@ -23,11 +20,9 @@ import {
   BarChart3,
   Shield,
   MoreVertical,
-  Loader2,
-  AlertTriangle,
-  X,
-  Clock
+   X,
 } from 'lucide-react';
+import { walletService } from '@/services/wallet.service';
 
 
 interface WalletData {
@@ -258,18 +253,24 @@ const SummaryCard = ({
 };
 
 export default function WalletManagementPage() {
-  const [activeTab, setActiveTab] = useState<'overview' | 'ledger' | 'withdrawals'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'ledger'>('overview');
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState<LiquidityStats | null>(null);
+  const [platformRevenue, setPlatformRevenue] = useState<any>(null)
 
   // Simulate API call for stats
   useEffect(() => {
     const fetchStats = async () => {
       setLoading(true);
-      // TODO: Replace with actual API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setStats(mockLiquidityStats);
-      setLoading(false);
+      try {
+        const revenue = await walletService.getPlatformRevenue();
+        setPlatformRevenue(revenue);
+        setStats(mockLiquidityStats);
+      } catch (error) {
+        console.error('Failed to fetch stats', error);
+      } finally {
+        setLoading(false);
+      }
     };
     
     fetchStats();
@@ -775,232 +776,6 @@ function WalletLedger() {
       {showAdjustmentModal && (
         <ManualAdjustmentModal onClose={() => setShowAdjustmentModal(false)} />
       )}
-    </div>
-  );
-}
-
-function WithdrawalManager() {
-  const [statusFilter, setStatusFilter] = useState<'all' | 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSING'>('all');
-  const [kycFilter, setKycFilter] = useState<'all' | 'VERIFIED' | 'PENDING' | 'REJECTED'>('all');
-  const [selectedWithdrawal, setSelectedWithdrawal] = useState<string | null>(null);
-  const [processing, setProcessing] = useState<string | null>(null);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
-
-  const filteredWithdrawals = mockWithdrawals.filter(w => {
-    const matchesStatus = statusFilter === 'all' || w.status === statusFilter;
-    const matchesKyc = kycFilter === 'all' || w.kycStatus === kycFilter;
-    return matchesStatus && matchesKyc;
-  });
-
-  const pendingWithdrawals = mockWithdrawals.filter(w => w.status === 'PENDING');
-  const totalPendingAmount = pendingWithdrawals.reduce((sum, w) => sum + w.amount, 0);
-
-  const handleApprove = async (id: string) => {
-    setProcessing(id);
-    // TODO: API call to approve withdrawal
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    alert(`Withdrawal ${id} approved successfully!`);
-    setProcessing(null);
-  };
-
-  const handleReject = async (id: string) => {
-    const reason = prompt('Enter rejection reason:');
-    if (reason) {
-      setProcessing(id);
-      // TODO: API call to reject withdrawal
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      alert(`Withdrawal ${id} rejected: ${reason}`);
-      setProcessing(null);
-    }
-  };
-
-  const getStatusColor = (status: string) => {
-    switch(status) {
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'APPROVED': return 'bg-green-100 text-green-800';
-      case 'REJECTED': return 'bg-red-100 text-red-800';
-      case 'PROCESSING': return 'bg-blue-100 text-blue-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getKycColor = (status: string) => {
-    switch(status) {
-      case 'VERIFIED': return 'bg-green-100 text-green-800';
-      case 'PENDING': return 'bg-yellow-100 text-yellow-800';
-      case 'REJECTED': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  return (
-    <div className="space-y-6">
-      {/* Pending Withdrawals Summary */}
-      {pendingWithdrawals.length > 0 && (
-        <div className="bg-orange-50 border border-orange-200 rounded-lg p-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <AlertTriangle className="w-6 h-6 text-orange-600" />
-              <div>
-                <h3 className="font-semibold text-gray-900">Pending Withdrawal Requests</h3>
-                <p className="text-sm text-gray-600">
-                  {pendingWithdrawals.length} requests • {formatCurrency(totalPendingAmount)} total
-                </p>
-              </div>
-            </div>
-            <button className="px-4 py-2 bg-orange-600 text-white rounded-md hover:bg-orange-700 flex items-center gap-2">
-              <Clock className="w-4 h-4" />
-              Process All
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="PENDING">Pending</option>
-              <option value="PROCESSING">Processing</option>
-              <option value="APPROVED">Approved</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
-          </div>
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700 mb-2">KYC Status</label>
-            <select
-              value={kycFilter}
-              onChange={(e) => setKycFilter(e.target.value as any)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="all">All KYC Status</option>
-              <option value="VERIFIED">Verified</option>
-              <option value="PENDING">Pending</option>
-              <option value="REJECTED">Rejected</option>
-            </select>
-          </div>
-          <div className="flex items-end">
-            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 flex items-center gap-2">
-              <Filter className="w-4 h-4" />
-              More Filters
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Withdrawals Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Merchant Details
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Bank Details
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredWithdrawals.map((withdrawal) => (
-                <tr key={withdrawal.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4">
-                    <div>
-                      <div className="font-medium text-gray-900">{withdrawal.merchantName}</div>
-                      <div className="text-sm text-gray-500">{withdrawal.merchantPhone}</div>
-                      <div className="text-xs text-gray-400">ID: {withdrawal.merchantId}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-lg font-bold text-gray-900">
-                      {formatCurrency(withdrawal.amount)}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      Requested: {withdrawal.requestedAt}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm">
-                      <div className="font-medium text-gray-900">{withdrawal.bankDetails.accountName}</div>
-                      <div className="text-gray-600">{withdrawal.bankDetails.accountNumber}</div>
-                      <div className="text-gray-500">{withdrawal.bankDetails.bankName}</div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-2">
-                      <span className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${getStatusColor(withdrawal.status)}`}>
-                        {withdrawal.status}
-                      </span>
-                      <span className={`px-2 py-1 inline-flex text-xs font-semibold rounded-full ${getKycColor(withdrawal.kycStatus)}`}>
-                        KYC: {withdrawal.kycStatus}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex gap-2">
-                      {withdrawal.status === 'PENDING' && (
-                        <>
-                          <button
-                            onClick={() => handleApprove(withdrawal.id)}
-                            disabled={processing === withdrawal.id}
-                            className="px-3 py-1 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                          >
-                            {processing === withdrawal.id ? (
-                              <Loader2 className="w-3 h-3 animate-spin" />
-                            ) : (
-                              <CheckCircle className="w-3 h-3" />
-                            )}
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleReject(withdrawal.id)}
-                            disabled={processing === withdrawal.id}
-                            className="px-3 py-1 bg-red-600 text-white text-sm rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1"
-                          >
-                            <XCircle className="w-3 h-3" />
-                            Reject
-                          </button>
-                        </>
-                      )}
-                      <button
-                        onClick={() => setSelectedWithdrawal(withdrawal.id)}
-                        className="px-3 py-1 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center gap-1"
-                      >
-                        <Eye className="w-3 h-3" />
-                        View
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
     </div>
   );
 }
