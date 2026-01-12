@@ -246,8 +246,6 @@ export const whatsappService = {
     return response.data;
   },
 
-  // ========== TOKEN MANAGEMENT ==========
-
   async checkTokenHealth(): Promise<TokenResponse> {
     const response = await api.get('/whatsapp/token/health');
     return response.data;
@@ -258,7 +256,6 @@ export const whatsappService = {
     return response.data;
   },
 
-  // ========== CONTACTS MANAGEMENT ==========
 
   async getRegisteredContacts(limit: number = 500): Promise<{ success: boolean; data: WhatsAppContact[] }> {
     const response = await api.get(`/whatsapp/contacts?limit=${limit}`);
@@ -325,8 +322,6 @@ export const whatsappService = {
     return response.data;
   },
 
-  // ========== MESSAGE SENDING ==========
-
   async sendMessage(data: WhatsAppMessageData): Promise<{ success: boolean; data: any }> {
     const response = await api.post('/whatsapp/send', data);
     return response.data;
@@ -346,8 +341,6 @@ export const whatsappService = {
     const response = await api.post('/whatsapp/send/list', data);
     return response.data;
   },
-
-  // ========== PRODUCT CATALOG MANAGEMENT ==========
 
   async syncProductToCatalog(product: ProductCatalogData): Promise<{ 
     success: boolean; 
@@ -372,8 +365,6 @@ export const whatsappService = {
     const response = await api.delete(`/whatsapp/catalog/products/${productId}`);
     return response.data;
   },
-
-  // ========== CONVERSATION MANAGEMENT ==========
 
   async getConversations(filters: ConversationFilters = {}): Promise<{ 
     success: boolean; 
@@ -433,8 +424,6 @@ export const whatsappService = {
     return response.data;
   },
 
-  // ========== MESSAGE MANAGEMENT ==========
-
   async sendChatMessage(data: SendChatMessageData): Promise<{ 
     success: boolean; 
     data: {
@@ -467,20 +456,14 @@ export const whatsappService = {
     const response = await api.post(`/whatsapp/conversations/${conversationId}/read`);
     return response.data;
   },
-
-  // ========== REAL-TIME UPDATES ==========
   
   async markMessageAsRead(messageId: string, conversationId: string): Promise<void> {
     socketService.markMessageAsRead(messageId, conversationId);
   },
-
-  // ========== TYPING INDICATORS ==========
   
   sendTypingStatus(conversationId: string, isTyping: boolean): void {
     socketService.sendTypingStatus(conversationId, isTyping);
   },
-
-  // ========== SOCKET INTEGRATION ==========
   
   setupRealTimeUpdates(
     onNewMessage: (data: NewMessageData) => void,
@@ -544,8 +527,6 @@ export const whatsappService = {
   isSocketConnected(): boolean {
     return socketService.isConnected();
   },
-
-  // ========== CONVERSATION SUBSCRIPTIONS ==========
   
   subscribeToConversation(conversationId: string): void {
     socketService.subscribeToConversation(conversationId);
@@ -555,8 +536,6 @@ export const whatsappService = {
     socketService.unsubscribeFromConversation(conversationId);
   },
 
-  // ========== BROADCAST ==========
-
   async sendBroadcast(data: BroadcastData): Promise<{ 
     success: boolean; 
     data: BroadcastResults
@@ -564,8 +543,6 @@ export const whatsappService = {
     const response = await api.post('/whatsapp/broadcast', data);
     return response.data;
   },
-
-  // ========== STATISTICS ==========
 
   async getStatistics(startDate?: Date, endDate?: Date): Promise<{ success: boolean; data: ChatStatistics }> {
     const params = new URLSearchParams();
@@ -575,8 +552,6 @@ export const whatsappService = {
     const response = await api.get(`/whatsapp/statistics?${params.toString()}`);
     return response.data;
   },
-
-  // ========== QUICK MESSAGES (Common Templates) ==========
 
   async sendWelcomeMessage(phone: string): Promise<{ success: boolean; data: any }> {
     return this.sendMessage({
@@ -610,8 +585,6 @@ export const whatsappService = {
     });
   },
 
-  // ========== UTILITY FUNCTIONS ==========
-
   formatPhoneNumber(phone: string): string {
     // Remove any non-digit characters
     const digits = phone.replace(/\D/g, '');
@@ -637,8 +610,6 @@ export const whatsappService = {
     return `${prefix}****${suffix}`;
   },
 
-  // ========== SOCKET UTILITIES ==========
-  
   getSocketConnectionStatus() {
     return socketService.getConnectionStatus();
   },
@@ -647,8 +618,6 @@ export const whatsappService = {
     return socketService.ping();
   },
 
-  // ========== VIDEO CALL FUNCTIONS ==========
-  
   initiateVideoCall(data: {
     participantId: string;
     participantName: string;
@@ -665,8 +634,6 @@ export const whatsappService = {
     socketService.endVideoCall(callId);
   },
 
-  // ========== NOTIFICATION FUNCTIONS ==========
-  
   broadcastNotification(data: {
     type: string;
     title: string;
@@ -676,8 +643,6 @@ export const whatsappService = {
     socketService.broadcastNotification(data);
   },
 
-  // ========== SOCKET DEBUGGING ==========
-  
   enableSocketDebug(): void {
     socketService.enableDebug();
   },

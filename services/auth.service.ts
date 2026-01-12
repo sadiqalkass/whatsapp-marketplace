@@ -23,7 +23,7 @@ interface AuthResponse {
   };
 }
 
-type User = AuthResponse['data']['user'];
+type User = AuthResponse['data']['user'] & { merchantId?: string };
 
 export const authService = {
   register: async (data: RegisterData) => {
