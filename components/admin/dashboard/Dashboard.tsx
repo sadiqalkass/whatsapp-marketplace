@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -18,7 +18,9 @@ import {
   Wallet,
   Download,
   ChevronDown,
-  Filter
+  Filter,
+  Loader2,
+  AlertCircle
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { StatCardProps, StatusBadgeProps } from '@/Types/types';
@@ -48,6 +50,9 @@ import {
   Scatter,
   ZAxis
 } from 'recharts';
+import toast from 'react-hot-toast';
+import { adminDashboardService, AdminDashboardData } from '@/services/adminDashboard.service';
+import { TimeFrame } from '@/Types/merchantDashboard.types';
 
 type IconType = React.ComponentType<React.SVGProps<SVGSVGElement>>;
 
@@ -117,8 +122,7 @@ interface ActionButtonProps { icon: IconType; label: string; variant?: ButtonVar
 const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, label, variant = 'default', delay }) => {
   const router = useRouter();
   
-  const handleClick = () => {
-    // Add navigation logic based on the action
+  const handleClick = async () => {
     switch (label) {
       case 'Verify New Merchant':
         router.push('/admin/onboarding');
@@ -130,8 +134,33 @@ const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, label, variant 
         router.push('/admin/payouts');
         break;
       case 'Download Daily Report':
-        // Trigger download or open reports page
-        router.push('/admin/reports');
+        try {
+          const toastId = toast.loading('Generating report...');
+          const today = new Date();
+          const yesterday = new Date(today);
+          yesterday.setDate(yesterday.getDate() - 1);
+          
+          const reportData = {
+            startDate: yesterday.toISOString().split('T')[0],
+            endDate: today.toISOString().split('T')[0],
+            reportType: 'all' as const
+          };
+          
+          const response = await adminDashboardService.exportReport(reportData);
+          
+          // Create download link
+          const url = window.URL.createObjectURL(new Blob([response.data]));
+          const link = document.createElement('a');
+          link.href = url;
+          link.setAttribute('download', `admin-report-${today.toISOString().split('T')[0]}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+          
+          toast.success('Report downloaded successfully!', { id: toastId });
+        } catch (error) {
+          toast.error('Failed to download report. Please try again.');
+        }
         break;
     }
   };
@@ -155,13 +184,19 @@ const ActionButton: React.FC<ActionButtonProps> = ({ icon: Icon, label, variant 
   );
 };
 
-interface AlertItemProps { type: 'delivery' | 'payment' | 'stock'; message: string; time: string; delay?: number }
+interface AlertItemProps { 
+  type: 'delivery' | 'payment' | 'stock' | 'system';
+  message: string; 
+  time: string; 
+  delay?: number 
+}
 
 const AlertItem: React.FC<AlertItemProps> = ({ type, message, time, delay }) => {
   const icons: Record<AlertItemProps['type'], IconType> = {
     delivery: Truck,
     payment: CreditCard,
-    stock: Package
+    stock: Package,
+    system: AlertCircle
   };
   const Icon = icons[type];
   
@@ -183,46 +218,6 @@ const AlertItem: React.FC<AlertItemProps> = ({ type, message, time, delay }) => 
   );
 };
 
-// Revenue data for line chart
-const revenueData = [
-  { day: 'Mon', revenue: 420000, profit: 210000 },
-  { day: 'Tue', revenue: 520000, profit: 260000 },
-  { day: 'Wed', revenue: 580000, profit: 290000 },
-  { day: 'Thu', revenue: 620000, profit: 310000 },
-  { day: 'Fri', revenue: 810000, profit: 405000 },
-  { day: 'Sat', revenue: 920000, profit: 460000 },
-  { day: 'Sun', revenue: 780000, profit: 390000 },
-];
-
-// Category performance data for pie chart
-const categoryData = [
-  { name: 'Electronics', value: 35, color: '#8884d8' },
-  { name: 'Fashion', value: 25, color: '#82ca9d' },
-  { name: 'Groceries', value: 20, color: '#ffc658' },
-  { name: 'Home & Living', value: 15, color: '#ff8042' },
-  { name: 'Beauty', value: 5, color: '#0088fe' },
-];
-
-// Merchant performance data for bar chart
-const merchantData = [
-  { name: 'Tech Haven', orders: 450, revenue: 1200000, rating: 4.8 },
-  { name: 'Urban Style', orders: 380, revenue: 980000, rating: 4.7 },
-  { name: 'Fresh Mart', orders: 320, revenue: 750000, rating: 4.6 },
-  { name: 'Home Comfort', orders: 280, revenue: 620000, rating: 4.5 },
-  { name: 'Beauty Palace', orders: 190, revenue: 480000, rating: 4.4 },
-];
-
-// Geographic distribution data
-const zoneData = [
-  { zone: 'Ikeja', orders: 189, revenue: 2450000, deliveryTime: 35 },
-  { zone: 'VI', orders: 167, revenue: 1980000, deliveryTime: 28 },
-  { zone: 'Lekki', orders: 154, revenue: 1820000, deliveryTime: 42 },
-  { zone: 'Surulere', orders: 143, revenue: 1650000, deliveryTime: 38 },
-  { zone: 'Yaba', orders: 138, revenue: 1420000, deliveryTime: 32 },
-  { zone: 'Ajah', orders: 112, revenue: 1250000, deliveryTime: 45 },
-  { zone: 'Gbagada', orders: 98, revenue: 1120000, deliveryTime: 40 },
-];
-
 // Custom tooltip for charts
 const CustomTooltip = ({ active, payload, label }: any) => {
   if (active && payload && payload.length) {
@@ -231,7 +226,9 @@ const CustomTooltip = ({ active, payload, label }: any) => {
         <p className="font-medium text-gray-900">{label}</p>
         {payload.map((entry: any, index: number) => (
           <p key={index} className="text-sm" style={{ color: entry.color }}>
-            {entry.name}: {entry.name.includes('revenue') ? `₦${entry.value.toLocaleString()}` : entry.value}
+            {entry.name}: {entry.name.includes('revenue') || entry.name.includes('profit') 
+              ? `₦${entry.value.toLocaleString()}` 
+              : entry.value}
           </p>
         ))}
       </div>
@@ -241,21 +238,21 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 };
 
 // Revenue Trend Chart Component
-const RevenueTrendChart = () => {
+const RevenueTrendChart: React.FC<{ data: Array<{ period: string; revenue: number; profit: number; orders: number }> }> = ({ data }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold text-gray-900">Revenue Trends (Weekly)</h3>
+        <h3 className="font-semibold text-gray-900">Revenue Trends</h3>
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Filter className="w-4 h-4" />
-          <span>Last 7 days</span>
+          <span>Weekly</span>
         </div>
       </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={revenueData} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+          <AreaChart data={data} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="day" />
+            <XAxis dataKey="period" />
             <YAxis tickFormatter={(value) => `₦${(value / 1000).toFixed(0)}k`} />
             <Tooltip 
               content={<CustomTooltip />}
@@ -288,7 +285,7 @@ const RevenueTrendChart = () => {
 };
 
 // Category Performance Chart
-const CategoryPerformanceChart = () => {
+const CategoryPerformanceChart: React.FC<{ data: Array<{ name: string; value: number; revenue: number; orders: number; color: string }> }> = ({ data }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       <h3 className="font-semibold text-gray-900 mb-4">Category Performance</h3>
@@ -296,7 +293,7 @@ const CategoryPerformanceChart = () => {
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={categoryData}
+              data={data}
               cx="50%"
               cy="50%"
               labelLine={false}
@@ -305,12 +302,16 @@ const CategoryPerformanceChart = () => {
               fill="#8884d8"
               dataKey="value"
             >
-              {categoryData.map((entry, index) => (
+              {data.map((entry, index) => (
                 <Cell key={`cell-${index}`} fill={entry.color} />
               ))}
             </Pie>
             <Tooltip 
-              formatter={(value: number) => [`${value}%`, 'Market Share']}
+              formatter={(value: number, name: string) => {
+                if (name === 'value') return [`${value}%`, 'Market Share'];
+                if (name === 'revenue') return [`₦${value.toLocaleString()}`, 'Revenue'];
+                return [value, name];
+              }}
               contentStyle={{ 
                 backgroundColor: 'white',
                 border: '1px solid #e5e7eb',
@@ -326,18 +327,27 @@ const CategoryPerformanceChart = () => {
 };
 
 // Merchant Comparison Chart
-const MerchantComparisonChart = () => {
+const MerchantComparisonChart: React.FC<{ data: Array<{ name: string; orders: number; revenue: number; rating: number }> }> = ({ data }) => {
+  const router = useRouter();
+  
+  const handleViewAll = () => {
+    router.push('/admin/merchants');
+  };
+
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       <div className="flex items-center justify-between mb-4">
         <h3 className="font-semibold text-gray-900">Top Merchant Performance</h3>
-        <button className="text-sm text-blue-600 hover:text-blue-700 flex items-center">
+        <button 
+          onClick={handleViewAll}
+          className="text-sm text-blue-600 hover:text-blue-700 flex items-center"
+        >
           View All <ChevronDown className="w-4 h-4 ml-1" />
         </button>
       </div>
       <div className="h-64">
         <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={merchantData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+          <BarChart data={data} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
             <XAxis dataKey="name" angle={-45} textAnchor="end" height={60} />
             <YAxis yAxisId="left" />
@@ -361,7 +371,7 @@ const MerchantComparisonChart = () => {
 };
 
 // Geographic Heat Map Chart
-const GeographicHeatMap = () => {
+const GeographicHeatMap: React.FC<{ data: Array<{ zone: string; orders: number; revenue: number; deliveryTime: number; averageFee: number }> }> = ({ data }) => {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-4">
       <h3 className="font-semibold text-gray-900 mb-4">Delivery Zone Performance</h3>
@@ -399,7 +409,7 @@ const GeographicHeatMap = () => {
             <Legend />
             <Scatter 
               name="Delivery Zones" 
-              data={zoneData} 
+              data={data} 
               fill="#8884d8" 
               shape="circle"
             />
@@ -409,13 +419,17 @@ const GeographicHeatMap = () => {
       <div className="mt-4 grid grid-cols-2 gap-2">
         <div className="text-center">
           <div className="text-sm font-medium text-gray-600">Top Revenue Zone</div>
-          <div className="text-lg font-semibold text-gray-900">Ikeja</div>
-          <div className="text-sm text-gray-500">₦2.45M</div>
+          <div className="text-lg font-semibold text-gray-900">{data[0]?.zone || 'N/A'}</div>
+          <div className="text-sm text-gray-500">₦{(data[0]?.revenue || 0).toLocaleString()}</div>
         </div>
         <div className="text-center">
           <div className="text-sm font-medium text-gray-600">Fastest Delivery</div>
-          <div className="text-lg font-semibold text-gray-900">Victoria Island</div>
-          <div className="text-sm text-gray-500">28 mins avg</div>
+          <div className="text-lg font-semibold text-gray-900">
+            {data.reduce((prev, current) => (prev.deliveryTime < current.deliveryTime) ? prev : current).zone}
+          </div>
+          <div className="text-sm text-gray-500">
+            {data.reduce((prev, current) => (prev.deliveryTime < current.deliveryTime) ? prev : current).deliveryTime} mins avg
+          </div>
         </div>
       </div>
     </div>
@@ -423,11 +437,11 @@ const GeographicHeatMap = () => {
 };
 
 // Order Velocity Radar Chart
-const OrderVelocityChart = () => {
-  const radarData = zoneData.map(zone => ({
+const OrderVelocityChart: React.FC<{ data: Array<{ zone: string; orders: number; revenue: number; deliveryTime: number; averageFee: number }> }> = ({ data }) => {
+  const radarData = data.map(zone => ({
     subject: zone.zone,
-    A: zone.orders,
-    fullMark: 200,
+    orders: zone.orders,
+    fullMark: Math.max(...data.map(d => d.orders)),
   }));
 
   return (
@@ -441,12 +455,14 @@ const OrderVelocityChart = () => {
             <PolarRadiusAxis />
             <Radar
               name="Orders"
-              dataKey="A"
+              dataKey="orders"
               stroke="#8884d8"
               fill="#8884d8"
               fillOpacity={0.6}
             />
-            <Tooltip />
+            <Tooltip 
+              formatter={(value: number) => [value, 'Orders']}
+            />
             <Legend />
           </RadarChart>
         </ResponsiveContainer>
@@ -455,7 +471,7 @@ const OrderVelocityChart = () => {
   );
 };
 
-// Order Flow Panel Component (Keep your existing interactive buttons)
+// Order Flow Panel Component
 type StatusKey = 'awaiting-payment' | 'awaiting-pickup' | 'in-delivery' | 'completed' | 'issues';
 
 const ORDER_STATUSES = [
@@ -468,6 +484,7 @@ const ORDER_STATUSES = [
 
 const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; count: number }> = ({ status, count }) => {
   const router = useRouter();
+  
   const handleClick = () => {
     const params = new URLSearchParams();
     switch (status.key) {
@@ -512,13 +529,13 @@ const OrderStatusButton: React.FC<{ status: (typeof ORDER_STATUSES)[number]; cou
   );
 };
 
-const OrderFlowPanel: React.FC = () => {
+const OrderFlowPanel: React.FC<{ orderFlow: any }> = ({ orderFlow }) => {
   const counts: Record<StatusKey, number> = {
-    'awaiting-payment': 45,
-    'awaiting-pickup': 62,
-    'in-delivery': 89,
-    'completed': 234,
-    'issues': 8
+    'awaiting-payment': orderFlow?.['awaiting-payment'] || 0,
+    'awaiting-pickup': orderFlow?.['awaiting-pickup'] || 0,
+    'in-delivery': orderFlow?.['in-delivery'] || 0,
+    'completed': orderFlow?.['completed'] || 0,
+    'issues': orderFlow?.['issues'] || 0
   };
 
   return (
@@ -585,9 +602,137 @@ const QuickActionsCard = () => {
   );
 };
 
+// Loading State Component
+const DashboardLoading: React.FC = () => {
+  return (
+    <div className="flex-1 min-h-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="flex items-center justify-center h-96">
+          <div className="text-center">
+            <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
+            <p className="text-gray-600">Loading dashboard data...</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Error State Component
+const DashboardError: React.FC<{ onRetry: () => void }> = ({ onRetry }) => {
+  return (
+    <div className="flex-1 min-h-full">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex">
+            <AlertCircle className="w-6 h-6 text-red-600 mr-3 mt-0.5" />
+            <div>
+              <h3 className="text-lg font-medium text-red-800 mb-2">Failed to load dashboard data</h3>
+              <p className="text-red-700 mb-4">Please check your connection and try again.</p>
+              <button
+                onClick={onRetry}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors"
+              >
+                Retry Loading
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // Main Dashboard Component
 const Dashboard: React.FC = () => {
-  const [timeFilter, setTimeFilter] = useState<'today' | '7days' | '30days'>('today');
+  const [timeFilter, setTimeFilter] = useState <TimeFrame>('today');
+  const [dashboardData, setDashboardData] = useState<AdminDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const router = useRouter();
+
+  const fetchDashboardData = async () => {
+    setLoading(true);
+    setError(false);
+    
+    try {
+      const response = await adminDashboardService.getDashboard({ timeFrame: timeFilter });
+      
+      if (response.success) {
+        setDashboardData(response.data);
+        toast.success('Dashboard updated successfully');
+      } else {
+        toast.error('Failed to load dashboard data');
+        setError(true);
+      }
+    } catch (err) {
+      console.error('Dashboard fetch error:', err);
+      toast.error('An error occurred while loading dashboard data');
+      setError(true);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHealthCheck = async () => {
+    try {
+      const toastId = toast.loading('Checking system health...');
+      const response = await adminDashboardService.healthCheck();
+      toast.success('System health check completed', { id: toastId });
+      
+      if (!response.data.healthy) {
+        toast.error('Some services are experiencing issues');
+      }
+    } catch (error) {
+      toast.error('Failed to perform health check');
+    }
+  };
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [timeFilter]);
+
+  const handleTimeFilterChange = (filter: TimeFrame) => {
+    setTimeFilter(filter);
+  };
+
+  const handleExportReport = async () => {
+    try {
+      const toastId = toast.loading('Preparing report...');
+      const response = await adminDashboardService.exportReport({
+        startDate: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days ago
+        endDate: new Date().toISOString().split('T')[0],
+        reportType: 'all'
+      });
+      
+      if (response.success) {
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]));
+        const link = document.createElement('a');
+        link.href = url;
+        link.setAttribute('download', `admin-report-${new Date().toISOString().split('T')[0]}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        
+        toast.success('Report exported successfully!', { id: toastId });
+      } else {
+        toast.error('Failed to export report', { id: toastId });
+      }
+    } catch (error) {
+      toast.error('An error occurred while exporting the report');
+    }
+  };
+
+  if (loading) {
+    return <DashboardLoading />;
+  }
+
+  if (error || !dashboardData) {
+    return <DashboardError onRetry={fetchDashboardData} />;
+  }
+
+  const { stats, revenueTrend, categoryPerformance, topMerchants, deliveryZones, orderFlow, alerts, systemHealth, quickStats } = dashboardData;
 
   return (
     <div className="flex-1 min-h-full">
@@ -601,22 +746,28 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-600 mt-1">Marketplace overview and system status</p>
             </div>
             <div className="flex gap-2">
-              {(['today', '7days', '30days'] as const).map((filter) => (
+              {(['today', 'week', 'month'] as const).map((filter) => (
                 <motion.button
                   key={filter}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.1 }}
-                  onClick={() => setTimeFilter(filter)}
+                  onClick={() => handleTimeFilterChange(filter)}
                   className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
                     timeFilter === filter
                       ? 'bg-blue-600 text-white'
                       : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-50'
                   }`}
                 >
-                  {filter === 'today' ? 'Today' : filter === '7days' ? 'Last 7 days' : 'Last 30 days'}
+                  {filter === 'today' ? 'Today' : filter === 'week' ? 'This Week' : 'This Month'}
                 </motion.button>
               ))}
+              <button
+                onClick={handleHealthCheck}
+                className="px-4 py-2 text-sm font-medium bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              >
+                System Check
+              </button>
             </div>
           </div>
         </div>
@@ -629,52 +780,139 @@ const Dashboard: React.FC = () => {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
         >
           <StatCard
-            label="Total Marketplace Value"
-            value="₦12.4M"
-            trend="up"
-            trendValue="+12.5% from last period"
-            icon={DollarSign}
+            label="Total Merchants"
+            value={stats.totalMerchants.toLocaleString()}
+            trend={stats.totalMerchants > 0 ? 'up' : undefined}
+            trendValue=""
+            icon={Users}
             delay={0}
           />
           <StatCard
-            label="Net Admin Profit"
-            value="₦847K"
-            trend="up"
-            trendValue="+8.2% from last period"
-            icon={Wallet}
+            label="Total Revenue"
+            value={`₦${stats.totalRevenue.toLocaleString()}`}
+            trend={stats.totalRevenue > 0 ? 'up' : undefined}
+            trendValue={`${timeFilter} period`}
+            icon={DollarSign}
             delay={80}
           />
           <StatCard
-            label="Orders Today"
-            value="347"
-            trend="up"
-            trendValue="+23 from yesterday"
+            label="Total Orders"
+            value={stats.totalOrders.toLocaleString()}
+            trend={stats.totalOrders > 0 ? 'up' : undefined}
+            trendValue={`${timeFilter} period`}
             icon={ShoppingCart}
             delay={160}
           />
           <StatCard
             label="Active Deliveries"
-            value="89"
-            trend="down"
-            trendValue="-12 from yesterday"
+            value={stats.activeDeliveries.toLocaleString()}
+            trend={stats.activeDeliveries > 0 ? 'up' : undefined}
+            trendValue="Currently active"
             icon={Truck}
             delay={240}
           />
         </motion.div>
 
+        {/* Additional Stats Row */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          <StatCard
+            label="Pending Verifications"
+            value={stats.pendingMerchantVerifications.toLocaleString()}
+            trend={stats.pendingMerchantVerifications > 0 ? 'down' : 'up'}
+            trendValue="Requires attention"
+            icon={CheckCircle}
+            delay={0}
+          />
+          <StatCard
+            label="Pending Payouts"
+            value={`₦${stats.pendingPayouts.toLocaleString()}`}
+            trend="down"
+            trendValue="To be processed"
+            icon={Wallet}
+            delay={80}
+          />
+          <StatCard
+            label="Platform Commission"
+            value={`₦${stats.platformCommission.toLocaleString()}`}
+            trend="up"
+            trendValue="Earned this period"
+            icon={CreditCard}
+            delay={160}
+          />
+          <StatCard
+            label="Avg Order Value"
+            value={`₦${stats.averageOrderValue.toLocaleString()}`}
+            trend="up"
+            trendValue="Average per order"
+            icon={TrendingUp}
+            delay={240}
+          />
+        </motion.div>
+
+        {/* Quick Stats Row */}
+        <motion.div 
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
+        >
+          <StatCard
+            label="New Merchants Today"
+            value={quickStats.newMerchantsToday.toString()}
+            trend="up"
+            trendValue="Today"
+            icon={Users}
+            delay={0}
+          />
+          <StatCard
+            label="New Orders Today"
+            value={quickStats.newOrdersToday.toString()}
+            trend="up"
+            trendValue="Today"
+            icon={ShoppingCart}
+            delay={80}
+          />
+          <StatCard
+            label="Revenue Today"
+            value={`₦${quickStats.totalRevenueToday.toLocaleString()}`}
+            trend="up"
+            trendValue="Today"
+            icon={DollarSign}
+            delay={160}
+          />
+          <StatCard
+            label="Active Users Today"
+            value={quickStats.activeUsersToday.toString()}
+            trend="up"
+            trendValue="Today"
+            icon={TrendingUp}
+            delay={240}
+          />
+        </motion.div>
+
         {/* Order Flow Status */}
-        <OrderFlowPanel />
+        <OrderFlowPanel orderFlow={orderFlow} />
 
         {/* Charts Section - Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-          <RevenueTrendChart />
-          <CategoryPerformanceChart />
+          <RevenueTrendChart data={revenueTrend} />
+          <CategoryPerformanceChart data={categoryPerformance} />
         </div>
 
         {/* Charts Section - Row 2 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <MerchantComparisonChart />
-          <GeographicHeatMap />
+          <MerchantComparisonChart data={topMerchants.map(m => ({ 
+            name: m.name, 
+            orders: m.orders, 
+            revenue: m.revenue, 
+            rating: m.rating 
+          }))} />
+          <GeographicHeatMap data={deliveryZones} />
         </div>
 
         {/* Bottom Three Columns Section */}
@@ -682,7 +920,7 @@ const Dashboard: React.FC = () => {
           
           {/* Order Velocity Radar */}
           <div className="lg:col-span-1">
-            <OrderVelocityChart />
+            <OrderVelocityChart data={deliveryZones} />
           </div>
 
           {/* Alerts & Exceptions */}
@@ -692,34 +930,24 @@ const Dashboard: React.FC = () => {
               <p className="text-sm text-gray-500 mt-1">Requires immediate attention</p>
             </div>
             <div className="divide-y divide-gray-200">
-              <AlertItem
-                type="delivery"
-                message="5 deliveries delayed by more than 2 hours in Lekki zone"
-                time="12 minutes ago"
-                delay={0}
-              />
-              <AlertItem
-                type="payment"
-                message="3 payment failures requiring manual verification"
-                time="25 minutes ago"
-                delay={0.1}
-              />
-              <AlertItem
-                type="stock"
-                message="Low stock alert: 'Fresh Tomatoes' in 2 merchant stores"
-                time="1 hour ago"
-                delay={0.2}
-              />
-              <AlertItem
-                type="delivery"
-                message="Delivery partner API response time elevated"
-                time="2 hours ago"
-                delay={0.3}
-              />
+              {alerts.slice(0, 4).map((alert, index) => (
+                <AlertItem
+                  key={index}
+                  type={alert.type}
+                  message={alert.message}
+                  time={alert.time}
+                  delay={index * 0.1}
+                />
+              ))}
+              {alerts.length === 0 && (
+                <div className="p-4 text-center text-gray-500">
+                  No alerts at the moment
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Quick Actions - Added Back */}
+          {/* Quick Actions */}
           <QuickActionsCard />
         </div>
 
@@ -735,24 +963,15 @@ const Dashboard: React.FC = () => {
             <p className="text-sm text-gray-500 mt-1">Real-time service status</p>
           </div>
           <div className="divide-y divide-gray-200">
-            <SystemHealthItem
-              service="WhatsApp API"
-              status="Operational"
-              icon={MessageSquare}
-              delay={0}
-            />
-            <SystemHealthItem
-              service="Payment Gateway"
-              status="Operational"
-              icon={CreditCard}
-              delay={0.1}
-            />
-            <SystemHealthItem
-              service="Delivery Partner"
-              status="Degraded"
-              icon={MapPin}
-              delay={0.2}
-            />
+            {systemHealth.map((service, index) => (
+              <SystemHealthItem
+                key={index}
+                service={service.service}
+                status={service.status}
+                icon={MessageSquare}
+                delay={index * 0.1}
+              />
+            ))}
           </div>
         </motion.div>
 
