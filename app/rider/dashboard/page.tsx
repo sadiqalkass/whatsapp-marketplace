@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services/auth.service';
 import { riderService } from '@/services/rider.service';
+import DeliveryMap from '@/components/rider/DeliverMap';
+
 import { 
   Power, 
   MapPin, 
@@ -245,6 +247,16 @@ export default function RiderDashboard() {
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Delivery Map */}
+                <div className='mb-4'>
+                  <DeliveryMap
+                    pickupLat={6.5244}
+                    pickupLng={3.3792}
+                    deliveryLat={6.4281}
+                    deliveryLng={3.4214}
+                  />
                 </div>
 
                 <div className="flex items-center gap-2">
