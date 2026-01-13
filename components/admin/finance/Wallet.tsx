@@ -7,7 +7,6 @@ import {
   TrendingDown, 
   Search, 
   Download, 
-  Lock, 
   Unlock,
   DollarSign,
   RefreshCw,
@@ -15,78 +14,35 @@ import {
   Edit,
   ArrowUpRight,
   ArrowDownRight,
-  Users,
   CreditCard,
   BarChart3,
-  Shield,
   MoreVertical,
-   X,
+  X,
 } from 'lucide-react';
 import { walletService } from '@/services/wallet.service';
+import type { MerchantWallet, PlatformRevenue, Transaction as WalletTransaction, AdjustmentRequest } from '@/services/wallet.service';
+import toast from 'react-hot-toast';
 
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: 'NGN',
+    minimumFractionDigits: 0
+  }).format(amount);
+};
 
-interface WalletData {
-  id: string;
-  phone: string;
-  balance: number;
-  currency: string;
-  status: 'ACTIVE' | 'LOCKED' | 'FROZEN';
-  lastTransaction: string;
-  createdAt: string;
-  ownerName?: string;
-  tier?: string;
-  transactionCount: number;
-}
-
-interface TransactionData {
-  id: string;
-  type: 'DEPOSIT' | 'PURCHASE' | 'REFUND' | 'WITHDRAWAL' | 'ADJUSTMENT';
-  amount: number;
-  ref: string;
-  status: 'PENDING' | 'SUCCESS' | 'FAILED';
-  createdAt: string;
-  description?: string;
-  adminName?: string;
-  walletId: string;
-}
-
-interface WithdrawalRequest {
-  id: string;
-  merchantId: string;
-  merchantName: string;
-  merchantPhone: string;
-  amount: number;
-  bankDetails: {
-    accountName: string;
-    accountNumber: string;
-    bankName: string;
-    bankCode: string;
-  };
-  requestedAt: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'PROCESSING';
-  reason?: string;
-  processedAt?: string;
-  processedBy?: string;
-  kycStatus: 'VERIFIED' | 'PENDING' | 'REJECTED';
-}
-
-interface LiquidityStats {
-  totalBalance: number;
-  deposits24h: number;
-  depositsTrend: number;
-  withdrawalsPending: number;
-  withdrawalsTrend: number;
-  activeWallets: number;
-  activeWalletsTrend: number;
-  lockedWallets: number;
-  totalTransactions24h: number;
-  averageTransaction: number;
-}
+const mockTransactions: WalletTransaction[] = [
+  { id: 'txn1', type: 'DEPOSIT', amount: 50000, balanceAfter: 50000, reference: 'PAY-123456', description: 'Card deposit', createdAt: '2024-12-23T10:30:00Z', metadata: { status: 'SUCCESS' } },
+  { id: 'txn2', type: 'PURCHASE', amount: -12000, balanceAfter: 38000, reference: 'ORD-789012', description: 'Grocery order', createdAt: '2024-12-23T09:15:00Z', metadata: { status: 'SUCCESS' } },
+  { id: 'txn3', type: 'REFUND', amount: 5000, balanceAfter: 43000, reference: 'ORD-789012', description: 'Order refund', createdAt: '2024-12-22T16:20:00Z', metadata: { status: 'SUCCESS' } },
+  { id: 'txn4', type: 'WITHDRAWAL', amount: -100000, balanceAfter: -57000, reference: 'WD-345678', description: 'Merchant payout', createdAt: '2024-12-22T14:00:00Z', metadata: { status: 'PENDING' } },
+  { id: 'txn5', type: 'ADJUSTMENT', amount: 15000, balanceAfter: -42000, reference: 'ADJ-001', description: 'Promotional bonus', createdAt: '2024-12-21T11:45:00Z', metadata: { status: 'SUCCESS' } },
+];
 
 interface SummaryCardProps {
   title: string;
   value: string;
-  icon: any;
+  icon: React.ElementType;
   trend?: {
     value: string;
     isPositive: boolean;
@@ -95,111 +51,6 @@ interface SummaryCardProps {
   color?: 'blue' | 'green' | 'orange' | 'purple' | 'red';
   loading?: boolean;
 }
-
-
-const mockLiquidityStats: LiquidityStats = {
-  totalBalance: 12450000,
-  deposits24h: 450000,
-  depositsTrend: 12.5,
-  withdrawalsPending: 280000,
-  withdrawalsTrend: -5.2,
-  activeWallets: 1250,
-  activeWalletsTrend: 8.3,
-  lockedWallets: 12,
-  totalTransactions24h: 342,
-  averageTransaction: 14500
-};
-
-const mockWallets: WalletData[] = [
-  { id: '1', phone: '+2348012345678', balance: 145000, currency: 'NGN', status: 'ACTIVE', lastTransaction: '2024-12-23', createdAt: '2024-01-15', ownerName: 'John Doe', tier: 'Gold', transactionCount: 45 },
-  { id: '2', phone: '+2348087654321', balance: 89500, currency: 'NGN', status: 'ACTIVE', lastTransaction: '2024-12-22', createdAt: '2024-02-10', ownerName: 'Jane Smith', tier: 'Silver', transactionCount: 32 },
-  { id: '3', phone: '+2348098765432', balance: 0, currency: 'NGN', status: 'LOCKED', lastTransaction: '2024-11-15', createdAt: '2024-03-05', transactionCount: 12 },
-  { id: '4', phone: '+2348076543210', balance: 320000, currency: 'NGN', status: 'ACTIVE', lastTransaction: '2024-12-23', createdAt: '2024-01-20', ownerName: 'Robert Johnson', tier: 'Platinum', transactionCount: 89 },
-  { id: '5', phone: '+2348065432109', balance: 1500000, currency: 'NGN', status: 'ACTIVE', lastTransaction: '2024-12-23', createdAt: '2024-01-10', ownerName: 'Merchant Pro', tier: 'Business', transactionCount: 156 },
-  { id: '6', phone: '+2348054321098', balance: 45000, currency: 'NGN', status: 'ACTIVE', lastTransaction: '2024-12-22', createdAt: '2024-03-15', transactionCount: 8 },
-  { id: '7', phone: '+2348043210987', balance: 780000, currency: 'NGN', status: 'FROZEN', lastTransaction: '2024-12-21', createdAt: '2024-02-05', ownerName: 'Sarah Williams', tier: 'Gold', transactionCount: 67 },
-];
-
-const mockTransactions: TransactionData[] = [
-  { id: 'txn1', type: 'DEPOSIT', amount: 50000, ref: 'PAY-123456', status: 'SUCCESS', createdAt: '2024-12-23 10:30', description: 'Card deposit', walletId: '1' },
-  { id: 'txn2', type: 'PURCHASE', amount: -12000, ref: 'ORD-789012', status: 'SUCCESS', createdAt: '2024-12-23 09:15', description: 'Grocery order', walletId: '1' },
-  { id: 'txn3', type: 'REFUND', amount: 5000, ref: 'ORD-789012', status: 'SUCCESS', createdAt: '2024-12-22 16:20', description: 'Order refund', walletId: '1' },
-  { id: 'txn4', type: 'WITHDRAWAL', amount: -100000, ref: 'WD-345678', status: 'PENDING', createdAt: '2024-12-22 14:00', description: 'Merchant payout', walletId: '5' },
-  { id: 'txn5', type: 'ADJUSTMENT', amount: 15000, ref: 'ADJ-001', status: 'SUCCESS', createdAt: '2024-12-21 11:45', description: 'Promotional bonus', adminName: 'Admin User', walletId: '2' },
-  { id: 'txn6', type: 'DEPOSIT', amount: 200000, ref: 'PAY-789012', status: 'FAILED', createdAt: '2024-12-21 10:15', description: 'Failed bank transfer', walletId: '4' },
-];
-
-const mockWithdrawals: WithdrawalRequest[] = [
-  { 
-    id: 'wd1', 
-    merchantId: 'm1',
-    merchantName: 'Fashion Hub', 
-    merchantPhone: '+2348012345678',
-    amount: 500000, 
-    bankDetails: { 
-      accountName: 'Fashion Hub Ltd', 
-      accountNumber: '0123456789', 
-      bankName: 'GTBank',
-      bankCode: '058'
-    },
-    requestedAt: '2024-12-23 08:00',
-    status: 'PENDING',
-    kycStatus: 'VERIFIED'
-  },
-  { 
-    id: 'wd2', 
-    merchantId: 'm2',
-    merchantName: 'Tech World', 
-    merchantPhone: '+2348087654321',
-    amount: 320000, 
-    bankDetails: { 
-      accountName: 'Tech World Nigeria', 
-      accountNumber: '9876543210', 
-      bankName: 'Access Bank',
-      bankCode: '044'
-    },
-    requestedAt: '2024-12-22 15:30',
-    status: 'PENDING',
-    kycStatus: 'VERIFIED'
-  },
-  { 
-    id: 'wd3', 
-    merchantId: 'm3',
-    merchantName: 'Food Mart', 
-    merchantPhone: '+2348098765432',
-    amount: 150000, 
-    bankDetails: { 
-      accountName: 'Food Mart Enterprises', 
-      accountNumber: '5678901234', 
-      bankName: 'Zenith Bank',
-      bankCode: '057'
-    },
-    requestedAt: '2024-12-22 10:15',
-    status: 'APPROVED',
-    processedAt: '2024-12-23 09:30',
-    processedBy: 'Admin User',
-    kycStatus: 'VERIFIED'
-  },
-  { 
-    id: 'wd4', 
-    merchantId: 'm4',
-    merchantName: 'Electronics Plus', 
-    merchantPhone: '+2348076543210',
-    amount: 750000, 
-    bankDetails: { 
-      accountName: 'Electronics Plus Ltd', 
-      accountNumber: '246813579', 
-      bankName: 'First Bank',
-      bankCode: '011'
-    },
-    requestedAt: '2024-12-21 14:45',
-    status: 'REJECTED',
-    reason: 'Incomplete KYC documentation',
-    processedAt: '2024-12-22 11:20',
-    processedBy: 'Admin User',
-    kycStatus: 'PENDING'
-  },
-];
 
 const SummaryCard = ({ 
   title, 
@@ -255,34 +106,23 @@ const SummaryCard = ({
 export default function WalletManagementPage() {
   const [activeTab, setActiveTab] = useState<'overview' | 'ledger'>('overview');
   const [loading, setLoading] = useState(false);
-  const [stats, setStats] = useState<LiquidityStats | null>(null);
-  const [platformRevenue, setPlatformRevenue] = useState<any>(null)
+  const [platformRevenue, setPlatformRevenue] = useState<PlatformRevenue | null>(null)
 
-  // Simulate API call for stats
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       setLoading(true);
       try {
         const revenue = await walletService.getPlatformRevenue();
         setPlatformRevenue(revenue);
-        setStats(mockLiquidityStats);
       } catch (error) {
-        console.error('Failed to fetch stats', error);
+        console.error('Failed to fetch platform revenue', error);
       } finally {
         setLoading(false);
       }
     };
-    
-    fetchStats();
-  }, []);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
+    fetchData();
+  }, []);
 
   const refreshData = async () => {
     setLoading(true);
@@ -341,106 +181,44 @@ export default function WalletManagementPage() {
                 Wallet Ledger
               </div>
             </button>
-            <button
-              onClick={() => setActiveTab('withdrawals')}
-              className={`px-4 py-3 font-medium border-b-2 transition-all duration-200 ${
-                activeTab === 'withdrawals'
-                  ? 'border-blue-600 text-blue-600 bg-blue-50 rounded-t-lg'
-                  : 'border-transparent text-gray-600 hover:text-gray-900 hover:bg-gray-50 rounded-t-lg'
-              }`}
-            >
-              <div className="flex items-center gap-2 relative">
-                <DollarSign className="w-4 h-4" />
-                Withdrawals
-                {mockWithdrawals.filter(w => w.status === 'PENDING').length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full w-5 h-5 flex items-center justify-center">
-                    {mockWithdrawals.filter(w => w.status === 'PENDING').length}
-                  </span>
-                )}
-              </div>
-            </button>
           </div>
         </div>
       </div>
 
       {/* Tab Content */}
       <div className="space-y-6">
-        {activeTab === 'overview' && <WalletOverview stats={stats} loading={loading} />}
+        {activeTab === 'overview' && <WalletOverview loading={loading} platformRevenue={platformRevenue} />}
         {activeTab === 'ledger' && <WalletLedger />}
-        {activeTab === 'withdrawals' && <WithdrawalManager />}
       </div>
     </div>
   );
 }
 
-function WalletOverview({ stats, loading }: { stats: LiquidityStats | null, loading: boolean }) {
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0
-    }).format(amount);
-  };
+function WalletOverview({ loading, platformRevenue }: { loading: boolean, platformRevenue: PlatformRevenue | null }) {
 
   return (
     <div className="space-y-6">
       {/* Liquidity Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <SummaryCard
-          title="Total Platform Balance"
-          value={stats ? formatCurrency(stats.totalBalance) : '₦0'}
-          icon={Wallet}
-          color="blue"
-          trend={stats ? { value: `${stats.depositsTrend}%`, isPositive: stats.depositsTrend > 0 } : undefined}
-          loading={loading}
-        />
-        <SummaryCard
-          title="Deposits (24h)"
-          value={stats ? formatCurrency(stats.deposits24h) : '₦0'}
-          icon={ArrowDownRight}
-          color="green"
-          trend={stats ? { value: `${stats.depositsTrend}%`, isPositive: stats.depositsTrend > 0 } : undefined}
-          loading={loading}
-        />
-        <SummaryCard
-          title="Withdrawals Pending"
-          value={stats ? formatCurrency(stats.withdrawalsPending) : '₦0'}
-          icon={ArrowUpRight}
-          color="orange"
-          trend={stats ? { value: `${stats.withdrawalsTrend}%`, isPositive: stats.withdrawalsTrend > 0 } : undefined}
-          loading={loading}
-        />
-        <SummaryCard
-          title="Active Wallets"
-          value={stats ? stats.activeWallets.toLocaleString() : '0'}
-          icon={Users}
-          color="purple"
-          trend={stats ? { value: `${stats.activeWalletsTrend}%`, isPositive: stats.activeWalletsTrend > 0 } : undefined}
-          loading={loading}
-        />
-      </div>
-
-      {/* Additional Stats */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <SummaryCard
-          title="Locked/Frozen Wallets"
-          value={stats ? stats.lockedWallets.toString() : '0'}
-          icon={Lock}
-          color="red"
+          title="Total Platform Revenue"
+          value={platformRevenue ? formatCurrency(platformRevenue.totalRevenue) : '₦0'}
+          icon={Wallet}
+          color="blue"
           loading={loading}
         />
         <SummaryCard
-          title="Transactions (24h)"
-          value={stats ? stats.totalTransactions24h.toString() : '0'}
+          title="Total Payouts"
+          value={platformRevenue ? formatCurrency(platformRevenue.totalPayouts) : '₦0'}
+          icon={ArrowUpRight}
+          color="orange"
+          loading={loading}
+        />
+        <SummaryCard
+          title="Current Balance"
+          value={platformRevenue ? formatCurrency(platformRevenue.currentBalance) : '₦0'}
           icon={DollarSign}
           color="green"
-          loading={loading}
-        />
-        <SummaryCard
-          title="Avg Transaction"
-          value={stats ? formatCurrency(stats.averageTransaction) : '₦0'}
-          icon={BarChart3}
-          color="blue"
           loading={loading}
         />
       </div>
@@ -497,43 +275,125 @@ function WalletOverview({ stats, loading }: { stats: LiquidityStats | null, load
           </div>
         </div>
       </div>
+
+      {/* Platform Transactions */}
+      <PlatformTransactions />
     </div>
   );
 }
 
+function PlatformTransactions() {
+  const [txns, setTxns] = useState<WalletTransaction[] | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const fetchTxns = async () => {
+      setLoading(true);
+      try {
+        const data = await walletService.getPlatformTransactions(10);
+        setTxns(data || []);
+      } catch (error) {
+        console.error('Failed to fetch platform transactions', error);
+        toast.error('Failed to load platform transactions');
+        setTxns([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTxns();
+  }, []);
+
+  return (
+    <div className="bg-white rounded-lg shadow">
+      <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+        <h2 className="text-lg font-semibold text-gray-900">Platform Transactions</h2>
+        <button
+          onClick={async () => {
+            setLoading(true);
+            try {
+              const data = await walletService.getPlatformTransactions(10);
+              setTxns(data || []);
+            } catch (err) {
+              console.error(err);
+              toast.error('Failed to refresh');
+            } finally {
+              setLoading(false);
+            }
+          }}
+          className="text-sm text-blue-600 hover:text-blue-800 flex items-center gap-1"
+        >
+          <RefreshCw className="w-4 h-4" />
+          Refresh
+        </button>
+      </div>
+      <div className="p-6">
+        {loading ? (
+          <div className="space-y-4">
+            <div className="h-4 bg-gray-200 rounded w-1/3" />
+            <div className="h-4 bg-gray-200 rounded w-1/4" />
+          </div>
+        ) : !txns || txns.length === 0 ? (
+          <div className="text-gray-500">No platform transactions found</div>
+        ) : (
+          <div className="space-y-3">
+            {txns.slice(0, 5).map((t) => (
+              <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-100">
+                <div className="text-sm text-gray-900">{t.type}</div>
+                <div className={`text-sm font-semibold ${t.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {t.amount >= 0 ? '+' : '-'}{formatCurrency(Math.abs(t.amount))}
+                </div>
+                <div className="text-sm text-gray-500">{new Date(t.createdAt).toLocaleString()}</div>
+                <div className="text-sm text-blue-600">{t.reference}</div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+
 function WalletLedger() {
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'ACTIVE' | 'LOCKED' | 'FROZEN'>('all');
-  const [tierFilter, setTierFilter] = useState<string>('all');
-  const [selectedWallet, setSelectedWallet] = useState<string | null>(null);
+  const [selectedWallet, setSelectedWallet] = useState<MerchantWallet | null>(null);
   const [showAdjustmentModal, setShowAdjustmentModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(1);
   const [sortBy, setSortBy] = useState<'balance' | 'createdAt' | 'transactionCount'>('balance');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const itemsPerPage = 10;
+  const [wallets, setWallets] = useState<MerchantWallet[]>([]);
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0
-    }).format(amount);
+  const fetchWallets = async () => {
+    setLoading(true);
+    try {
+      const data = await walletService.getAllMerchantWallets();
+      setWallets(data || []);
+    } catch (error) {
+      console.error('Failed to fetch wallets:', error);
+      toast.error('Failed to load wallets');
+      setWallets([]);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const filteredWallets = mockWallets.filter(wallet => {
-    const matchesSearch = wallet.phone.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         wallet.ownerName?.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || wallet.status === statusFilter;
-    const matchesTier = tierFilter === 'all' || wallet.tier === tierFilter;
-    return matchesSearch && matchesStatus && matchesTier;
+  useEffect(() => {
+    fetchWallets();
+  }, []);
+  const filteredWallets = (wallets || []).filter((w) => {
+    const matchesSearch = w.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      w.merchantName?.toLowerCase().includes(searchQuery.toLowerCase());
+    return matchesSearch;
   }).sort((a, b) => {
     if (sortBy === 'balance') {
       return sortOrder === 'desc' ? b.balance - a.balance : a.balance - b.balance;
     } else if (sortBy === 'transactionCount') {
       return sortOrder === 'desc' ? b.transactionCount - a.transactionCount : a.transactionCount - b.transactionCount;
     } else {
-      return sortOrder === 'desc' 
+      return sortOrder === 'desc'
         ? new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         : new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
     }
@@ -544,11 +404,11 @@ function WalletLedger() {
     page * itemsPerPage
   );
 
-  const totalPages = Math.ceil(filteredWallets.length / itemsPerPage);
+  const totalPages = Math.max(1, Math.ceil(filteredWallets.length / itemsPerPage));
 
   const handleSort = (column: typeof sortBy) => {
     if (sortBy === column) {
-      setSortOrder(sortOrder === 'desc' ? 'asc' : 'desc');
+      setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
     } else {
       setSortBy(column);
       setSortOrder('desc');
@@ -571,37 +431,22 @@ function WalletLedger() {
             />
           </div>
           <div className="flex gap-2">
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Status</option>
-              <option value="ACTIVE">Active</option>
-              <option value="LOCKED">Locked</option>
-              <option value="FROZEN">Frozen</option>
-            </select>
-            <select
-              value={tierFilter}
-              onChange={(e) => setTierFilter(e.target.value)}
-              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">All Tiers</option>
-              <option value="Business">Business</option>
-              <option value="Platinum">Platinum</option>
-              <option value="Gold">Gold</option>
-              <option value="Silver">Silver</option>
-            </select>
           </div>
         </div>
-        
+
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">
-            Showing {paginatedWallets.length} of {filteredWallets.length} wallets
+            {loading ? 'Loading wallets...' : `Showing ${paginatedWallets.length} of ${filteredWallets.length} wallets`}
           </div>
           <div className="flex gap-2">
             <button
-              onClick={() => setShowAdjustmentModal(true)}
+              onClick={() => {
+                if (!selectedWallet) {
+                  toast('Select a wallet by clicking "View" on a row to adjust', { icon: 'ℹ️' });
+                  return;
+                }
+                setShowAdjustmentModal(true);
+              }}
               className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center gap-2 transition-colors"
             >
               <Edit className="w-4 h-4" />
@@ -671,9 +516,7 @@ function WalletLedger() {
                   <td className="px-6 py-4">
                     <div>
                       <div className="font-medium text-gray-900">{wallet.phone}</div>
-                      {wallet.ownerName && (
-                        <div className="text-sm text-gray-500">{wallet.ownerName}</div>
-                      )}
+                      <div className="text-sm text-gray-500">{wallet.merchantName}</div>
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -684,26 +527,9 @@ function WalletLedger() {
                   </td>
                   <td className="px-6 py-4">
                     <div className="space-y-1">
-                      <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        wallet.status === 'ACTIVE' 
-                          ? 'bg-green-100 text-green-800' 
-                          : wallet.status === 'LOCKED'
-                          ? 'bg-red-100 text-red-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {wallet.status === 'ACTIVE' ? (
-                          <><Unlock className="w-3 h-3 mr-1" /> Active</>
-                        ) : wallet.status === 'LOCKED' ? (
-                          <><Lock className="w-3 h-3 mr-1" /> Locked</>
-                        ) : (
-                          <><Shield className="w-3 h-3 mr-1" /> Frozen</>
-                        )}
+                      <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                        <Unlock className="w-3 h-3 mr-1" /> Active
                       </span>
-                      {wallet.tier && (
-                        <span className="px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-blue-100 text-blue-800">
-                          {wallet.tier}
-                        </span>
-                      )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -711,7 +537,7 @@ function WalletLedger() {
                     <div className="text-xs text-gray-500">Total transactions</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{wallet.lastTransaction}</div>
+                    <div className="text-sm text-gray-900">{wallet.updatedAt ? new Date(wallet.updatedAt).toLocaleString() : new Date(wallet.createdAt).toLocaleDateString()}</div>
                     <div className="text-xs text-gray-500">
                       Created: {new Date(wallet.createdAt).toLocaleDateString()}
                     </div>
@@ -719,7 +545,7 @@ function WalletLedger() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => setSelectedWallet(wallet.id)}
+                        onClick={() => setSelectedWallet(wallet)}
                         className="text-blue-600 hover:text-blue-900 flex items-center gap-1 px-3 py-1 rounded hover:bg-blue-50 transition-colors"
                       >
                         <Eye className="w-4 h-4" />
@@ -767,21 +593,27 @@ function WalletLedger() {
       {/* Transaction History Modal */}
       {selectedWallet && (
         <TransactionHistoryModal
-          walletId={selectedWallet}
+          wallet={selectedWallet}
           onClose={() => setSelectedWallet(null)}
         />
       )}
 
       {/* Manual Adjustment Modal */}
       {showAdjustmentModal && (
-        <ManualAdjustmentModal onClose={() => setShowAdjustmentModal(false)} />
+        <ManualAdjustmentModal
+          wallet={selectedWallet}
+          onClose={() => setShowAdjustmentModal(false)}
+          onSuccess={() => fetchWallets()}
+        />
       )}
     </div>
   );
 }
 
-function TransactionHistoryModal({ walletId, onClose }: { walletId: string; onClose: () => void }) {
-  const [transactions, setTransactions] = useState<TransactionData[]>([]);
+type UITransaction = WalletTransaction & { status?: string; adminName?: string; };
+
+function TransactionHistoryModal({ wallet, onClose }: { wallet: MerchantWallet; onClose: () => void }) {
+  const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterType, setFilterType] = useState<string>('all');
   const [filterStatus, setFilterStatus] = useState<string>('all');
@@ -789,31 +621,29 @@ function TransactionHistoryModal({ walletId, onClose }: { walletId: string; onCl
   useEffect(() => {
     const fetchTransactions = async () => {
       setLoading(true);
-      // TODO: Replace with API call
-      await new Promise(resolve => setTimeout(resolve, 800));
-      const walletTransactions = mockTransactions.filter(txn => txn.walletId === walletId);
-      setTransactions(walletTransactions);
-      setLoading(false);
+      try {
+        const data = await walletService.getMerchantTransactions(wallet.merchantId || wallet.id, 200);
+        setTransactions(data || []);
+      } catch (error) {
+        console.error('Failed to fetch transactions', error);
+        setTransactions([]);
+      } finally {
+        setLoading(false);
+      }
     };
-    
+
     fetchTransactions();
-  }, [walletId]);
+  }, [wallet]);
 
   const filteredTransactions = transactions.filter(txn => {
     if (filterType !== 'all' && txn.type !== filterType) return false;
-    if (filterStatus !== 'all' && txn.status !== filterStatus) return false;
+    if (filterStatus !== 'all') {
+      const t = txn as UITransaction;
+      const status = t.status || (txn.metadata && (txn.metadata.status || txn.metadata.transferStatus));
+      if (!status || String(status) !== filterStatus) return false;
+    }
     return true;
   });
-
-  const wallet = mockWallets.find(w => w.id === walletId);
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', {
-      style: 'currency',
-      currency: 'NGN',
-      minimumFractionDigits: 0
-    }).format(Math.abs(amount));
-  };
 
   const getTransactionIcon = (type: string) => {
     switch(type) {
@@ -845,7 +675,7 @@ function TransactionHistoryModal({ walletId, onClose }: { walletId: string; onCl
           <div>
             <h2 className="text-xl font-semibold text-gray-900">Transaction History</h2>
             <p className="text-sm text-gray-600">
-              {wallet?.phone} • {wallet?.ownerName} • Current Balance: {formatCurrency(wallet?.balance || 0)}
+              {wallet?.phone} • {wallet?.merchantName} • Current Balance: {formatCurrency(wallet?.balance || 0)}
             </p>
           </div>
           <button
@@ -912,44 +742,46 @@ function TransactionHistoryModal({ walletId, onClose }: { walletId: string; onCl
                     </td>
                   </tr>
                 ) : (
-                  filteredTransactions.map((txn) => (
-                    <tr key={txn.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {new Date(txn.createdAt).toLocaleString()}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          {getTransactionIcon(txn.type)}
-                          <span className="font-medium">{txn.type}</span>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 text-sm text-gray-600">
-                        {txn.description}
-                        {txn.adminName && (
-                          <div className="text-xs text-gray-500 mt-1">By: {txn.adminName}</div>
-                        )}
-                      </td>
-                      <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${
-                        txn.amount > 0 ? 'text-green-600' : 'text-red-600'
-                      }`}>
-                        {txn.amount > 0 ? '+' : '-'}{formatCurrency(txn.amount)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
-                          txn.status === 'SUCCESS' ? 'bg-green-100 text-green-800' :
-                          txn.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                          'bg-red-100 text-red-800'
-                        }`}>
-                          {txn.status}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <a href="#" className="text-blue-600 hover:text-blue-900">
-                          {txn.ref}
-                        </a>
-                      </td>
-                    </tr>
-                  ))
+                  filteredTransactions.map((txn) => {
+                    const t = txn as UITransaction;
+                    const statusLabel = t.status || (txn.metadata && (txn.metadata.status || txn.metadata.transferStatus)) || 'COMPLETED';
+                    return (
+                      <tr key={txn.id} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                          {new Date(txn.createdAt).toLocaleString()}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center gap-2">
+                            {getTransactionIcon(txn.type)}
+                            <span className="font-medium">{txn.type}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-sm text-gray-600">
+                          {txn.description}
+                          {t.adminName && (
+                            <div className="text-xs text-gray-500 mt-1">By: {t.adminName}</div>
+                          )}
+                        </td>
+                        <td className={`px-6 py-4 whitespace-nowrap text-sm font-semibold ${txn.amount >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {txn.amount >= 0 ? '+' : '-'}{formatCurrency(Math.abs(txn.amount))}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full ${
+                            statusLabel === 'SUCCESS' ? 'bg-green-100 text-green-800' :
+                            statusLabel === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {statusLabel}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                          <a href="#" className="text-blue-600 hover:text-blue-900">
+                            {txn.reference}
+                          </a>
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -980,24 +812,70 @@ function TransactionHistoryModal({ walletId, onClose }: { walletId: string; onCl
   );
 }
 
-function ManualAdjustmentModal({ onClose }: { onClose: () => void }) {
+function ManualAdjustmentModal({ wallet, onClose, onSuccess }: { wallet?: MerchantWallet | null; onClose: () => void; onSuccess?: () => void }) {
+  const [amount, setAmount] = useState<number>(0);
+  const [reason, setReason] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!wallet) return toast.error('No wallet selected');
+    if (!amount || amount === 0) return toast.error('Please enter an amount');
+
+    setSubmitting(true);
+    try {
+      const payload: AdjustmentRequest = { amount, reason };
+      await walletService.adjustMerchantBalance(wallet.merchantId || wallet.id, payload);
+      toast.success('Adjustment applied');
+      if (onSuccess) onSuccess();
+      onClose();
+    } catch (err) {
+      console.error('Adjustment failed', err);
+      toast.error('Failed to apply adjustment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-lg w-full">
-        <div className="p-6 border-b border-gray-200">
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
           <h2 className="text-xl font-semibold text-gray-900">Manual Balance Adjustment</h2>
+          <div className="text-sm text-gray-600">{wallet ? `${wallet.merchantName} • ${wallet.phone}` : ''}</div>
         </div>
-        <div className="p-6">
-          <p className="text-gray-600 mb-4">Manual adjustment functionality would go here.</p>
+        <div className="p-6 space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Amount (use negative for debit)</label>
+            <input
+              type="number"
+              value={amount}
+              onChange={(e) => setAmount(Number(e.target.value))}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
           <div className="flex justify-end gap-3">
             <button
               onClick={onClose}
-              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50"
+              disabled={submitting}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 disabled:opacity-50"
             >
               Cancel
             </button>
-            <button className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700">
-              Save Changes
+            <button
+              onClick={handleSubmit}
+              disabled={submitting}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50"
+            >
+              {submitting ? 'Saving...' : 'Save Changes'}
             </button>
           </div>
         </div>
@@ -1005,3 +883,5 @@ function ManualAdjustmentModal({ onClose }: { onClose: () => void }) {
     </div>
   );
 }
+
+export { ManualAdjustmentModal };

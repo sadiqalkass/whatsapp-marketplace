@@ -16,7 +16,7 @@ export interface Transaction {
   reference: string;
   description: string;
   createdAt: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 export interface WithdrawalRequest {
@@ -26,10 +26,30 @@ export interface WithdrawalRequest {
   bankName: string;
 }
 
+export interface AdjustmentRequest {
+  amount: number;
+  reason?: string;
+  note?: string;
+}
+
 export interface PlatformRevenue {
   totalRevenue: number;
   totalPayouts: number;
   currentBalance: number;
+}
+
+export interface MerchantWallet {
+  id: string;
+  merchantId: string;
+  merchantName: string;
+  phone: string;
+  email: string;
+  balance: number;
+  totalEarnings: number;
+  totalWithdrawals: number;
+  transactionCount: number;
+  createdAt: string;
+  updatedAt: string;
 }
 
 class WalletService {
@@ -58,6 +78,23 @@ class WalletService {
   async withdrawFromPlatform(data: WithdrawalRequest) {
     const response = await api.post('/wallet/platform/withdraw', data);
     return response.data;
+  }
+
+  // Platform transactions
+  async getPlatformTransactions(limit = 50): Promise<Transaction[]> {
+    const response = await api.get(`/wallet/platform/transactions?limit=${limit}`);
+    return response.data.data;
+  }
+
+  // Admin: adjust merchant balance
+  async adjustMerchantBalance(merchantId: string, data: AdjustmentRequest) {
+    const response = await api.post(`/wallet/merchant/${merchantId}/adjust`, data);
+    return response.data;
+  }
+
+  async getAllMerchantWallets(): Promise<MerchantWallet[]> {
+    const response = await api.get('/wallet/merchant/all');
+    return response.data.data;
   }
 }
 
