@@ -42,6 +42,7 @@ export const sidebarData: SidebarSection[] = [
       { id: 'admin/active-orders', label: 'Active Orders', badge: 8 },
       { id: 'admin/fulfillment', label: 'Fulfillment' },
       { id: 'admin/returns', label: 'Returns', badge: 7 },
+      { id: 'admin/deliveries', label: 'Deliveries' },
     ],
   },
   {
