@@ -4,6 +4,8 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services/auth.service';
 import { riderService } from '@/services/rider.service';
+import DeliveryMap from '@/components/rider/DeliverMap';
+
 import { 
   Power, 
   MapPin, 
@@ -48,9 +50,33 @@ export default function RiderDashboard() {
   const [deliveries, setDeliveries] = useState<Delivery[]>([]);
   const [loading, setLoading] = useState(true);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [riderLocation, setRiderLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
     fetchData();
+
+    // Get rider's live location
+    if (navigator.geolocation) {
+      const watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setRiderLocation({ lat: latitude, lng: longitude });
+          
+          // Update location on server
+          riderService.updateLocation(latitude, longitude);
+        },
+        (error) => {
+          console.error('Geolocation error:', error);
+        },
+        {
+          enableHighAccuracy: true,
+          maximumAge: 10000,
+          timeout: 5000,
+        }
+      );
+
+      return () => navigator.geolocation.clearWatch(watchId);
+    }
     
     // Auto-refresh every 30 seconds
     const interval = setInterval(fetchData, 30000);
@@ -245,6 +271,18 @@ export default function RiderDashboard() {
                       </p>
                     </div>
                   </div>
+                </div>
+
+                {/* Delivery Map */}
+                <div className='mb-4'>
+                  <DeliveryMap
+                    pickupLat={6.5244}
+                    pickupLng={3.3792}
+                    deliveryLat={6.4281}
+                    deliveryLng={3.4214}
+                    riderLat={riderLocation?.lat}
+                    riderLng={riderLocation?.lng}
+                  />
                 </div>
 
                 <div className="flex items-center gap-2">
